@@ -2,44 +2,204 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-/* Dark mode follows the system setting. */
-@custom-variant dark (@media (prefers-color-scheme: dark));
+/*
+ * dark: follows the active mode. An explicit data-mode wins; otherwise the
+ * system color scheme decides.
+ */
+@custom-variant dark {
+  &:where([data-mode="bar"], [data-mode="bar"] *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:not(:where([data-mode="cafe"], [data-mode="cafe"] *)) {
+      @slot;
+    }
+  }
+}
+
+/*
+ * Mugshot design tokens
+ *
+ * Black and white, plus one accent: grapefruit. The base does the work;
+ * grapefruit is used sparingly (logo, tags, highlights, progress) so it stays
+ * fun instead of loud. Two modes share one set of semantic tokens:
+ *   café — white (light)
+ *   bar  — black (dark)
+ *
+ * Every color is written as light-dark(café, bar) so a mode can be scoped to
+ * any subtree: <div data-mode="bar"> renders bar colors regardless of the page.
+ * With no data-mode set, the system color scheme decides.
+ *
+ * Tokens are re-declared on every [data-mode] element on purpose: Tailwind's
+ * CSS compiler polyfills light-dark() with variables that resolve where the
+ * token is declared, not where it's used.
+ */
+
+:root,
+[data-mode] {
+  color-scheme: light dark;
+
+  /* Surfaces */
+  --paper: light-dark(#fbfbf9, #0e0e0e);
+  --surface: light-dark(#ffffff, #171717);
+  --surface-raised: light-dark(#ffffff, #1f1f1f);
+  --sunken: light-dark(#f1f1ee, #090909);
+  --line: light-dark(#e4e4e0, #2a2a2a);
+  --line-strong: light-dark(#111111, #f5f5f2);
+
+  /* Ink */
+  --ink: light-dark(#111111, #f5f5f2);
+  --ink-muted: light-dark(#5c5c5a, #a3a3a0);
+  --ink-faint: light-dark(#8e8e8a, #6b6b68);
+
+  /*
+   * Brand — grapefruit. As a fill it takes black text. For small text on
+   * white use brand-strong; plain grapefruit is too light to read there.
+   * (Named "brand" because shadcn's "accent" means a subtle hover fill.)
+   */
+  --brand: light-dark(#ee6c7e, #f27d8d);
+  --brand-strong: light-dark(#c23f55, #f27d8d);
+  --brand-ink: light-dark(#111111, #111111);
+  --brand-wash: light-dark(#fce0e4, #3a1d22);
+
+  /* Feedback */
+  --success: light-dark(#2f7d4f, #7fd1a0);
+  --warning: light-dark(#b26b00, #ffb547);
+  --danger: light-dark(#c8302a, #ff7b6b);
+
+  /*
+   * Liquid palette — what's actually in the glass. Used by <GlassFill>,
+   * ingredient swatches and ratio bars. Tuned to read on both paper colors.
+   */
+  --liquid-spirit: light-dark(#c47f30, #d08d3c);
+  --liquid-clear: light-dark(#d8d3c4, #cfc9b8);
+  --liquid-liqueur: light-dark(#a03a4c, #c4566a);
+  --liquid-fortified: light-dark(#7c2c30, #a8454a);
+  --liquid-citrus: light-dark(#e3c24a, #ebcd5c);
+  --liquid-syrup: light-dark(#e2ae68, #e8b977);
+  --liquid-bitters: light-dark(#5b1e19, #8a3a2f);
+  --liquid-coffee: light-dark(#4b2b1b, #6b4029);
+  --liquid-milk: light-dark(#e6d4b4, #e3d2b3);
+  --liquid-foam: light-dark(#f4ead6, #f7f0e2);
+  --liquid-water: light-dark(#bcd6dc, #9ec2cb);
+  --liquid-soda: light-dark(#d5e8ea, #b9d8dc);
+
+  /* shadcn tokens, mapped onto the palette above */
+  --background: var(--paper);
+  --foreground: var(--ink);
+  --card: var(--surface);
+  --card-foreground: var(--ink);
+  --popover: var(--surface-raised);
+  --popover-foreground: var(--ink);
+  --primary: var(--ink);
+  --primary-foreground: var(--paper);
+  --secondary: var(--sunken);
+  --secondary-foreground: var(--ink);
+  --muted: var(--sunken);
+  --muted-foreground: var(--ink-muted);
+  --accent: var(--sunken);
+  --accent-foreground: var(--ink);
+  --destructive: var(--danger);
+  --border: var(--line);
+  --input: var(--line);
+  --ring: var(--ink-faint);
+  --chart-1: var(--brand);
+  --chart-2: var(--ink);
+  --chart-3: var(--ink-muted);
+  --chart-4: var(--ink-faint);
+  --chart-5: var(--line);
+  --radius: 0.625rem;
+  --sidebar: var(--surface);
+  --sidebar-foreground: var(--ink);
+  --sidebar-primary: var(--ink);
+  --sidebar-primary-foreground: var(--paper);
+  --sidebar-accent: var(--sunken);
+  --sidebar-accent-foreground: var(--ink);
+  --sidebar-border: var(--line);
+  --sidebar-ring: var(--ink-faint);
+
+  /* Elevation — borders do most of the work; shadow only on hover */
+  --shadow-tint: light-dark(rgb(0 0 0 / 0.18), rgb(0 0 0 / 0.6));
+  --elev-card: 0 0 0 transparent;
+  --elev-lift: 0 10px 28px -14px var(--shadow-tint);
+}
+
+[data-mode="cafe"] {
+  color-scheme: light;
+}
+
+[data-mode="bar"] {
+  color-scheme: dark;
+}
 
 @theme inline {
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-sunken: var(--sunken);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-faint: var(--ink-faint);
+  --color-brand: var(--brand);
+  --color-brand-strong: var(--brand-strong);
+  --color-brand-ink: var(--brand-ink);
+  --color-brand-wash: var(--brand-wash);
+  --color-success: var(--success);
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-geist-sans);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+
+  --color-liquid-spirit: var(--liquid-spirit);
+  --color-liquid-clear: var(--liquid-clear);
+  --color-liquid-liqueur: var(--liquid-liqueur);
+  --color-liquid-fortified: var(--liquid-fortified);
+  --color-liquid-citrus: var(--liquid-citrus);
+  --color-liquid-syrup: var(--liquid-syrup);
+  --color-liquid-bitters: var(--liquid-bitters);
+  --color-liquid-coffee: var(--liquid-coffee);
+  --color-liquid-milk: var(--liquid-milk);
+  --color-liquid-foam: var(--liquid-foam);
+  --color-liquid-water: var(--liquid-water);
+  --color-liquid-soda: var(--liquid-soda);
+
+  --font-sans: var(--font-inter-tight);
+  --font-mono: var(--font-jetbrains-mono);
+  --font-display: var(--font-inter-tight);
+  --font-heading: var(--font-inter-tight);
+
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -47,77 +207,12 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
-}
 
-:root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-}
+  --radius-card: 0.75rem;
+  --radius-control: 0.625rem;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.205 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.922 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.704 0.191 22.216);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.488 0.243 264.376);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.556 0 0);
-  }
+  --shadow-card: var(--elev-card);
+  --shadow-lift: var(--elev-lift);
 }
 
 @layer base {
@@ -129,6 +224,16 @@
   }
   html {
     @apply font-sans;
+  }
+
+  ::selection {
+    background: var(--brand-wash);
+    color: var(--ink);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
   }
 }
 
@@ -146,3 +251,21 @@
     }
   }
 }
+
+/* Measurements always align: tabular figures, slashed zero off. */
+@utility measure {
+  font-family: var(--font-jetbrains-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* Small caps label used for section eyebrows and spec headings. */
+@utility eyebrow {
+  font-size: 0.6875rem;
+  line-height: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
