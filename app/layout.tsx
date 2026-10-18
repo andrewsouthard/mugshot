@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { SITE_NAME, SITE_URL } from "@/lib/site";
 import { OfflineBanner } from "./offline-banner";
 import { ServiceWorkerRegistration } from "./service-worker-registration";
 import "./globals.css";
@@ -15,7 +16,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Mugshot",
+  metadataBase: SITE_URL,
+  title: { default: SITE_NAME, template: `%s · ${SITE_NAME}` },
   description: "Mugshot",
   applicationName: "Mugshot",
   appleWebApp: {

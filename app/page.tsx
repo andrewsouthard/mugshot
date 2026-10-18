@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getRecipeBundle } from "@/lib/content/load";
 
 // Placeholder until search lands (build order step 3).
@@ -10,7 +11,11 @@ export default function Home() {
       <ul className="mt-6 space-y-4">
         {recipes.map((recipe) => (
           <li key={recipe.id}>
-            <h2 className="font-medium">{recipe.name}</h2>
+            <h2 className="font-medium">
+              <Link href={`/recipes/${recipe.id}`} className="hover:underline">
+                {recipe.name}
+              </Link>
+            </h2>
             <p className="text-sm text-muted-foreground">{recipe.description}</p>
           </li>
         ))}

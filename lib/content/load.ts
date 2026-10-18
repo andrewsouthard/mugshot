@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
-import type { RecipeBundle } from "./schema";
+import type { RecipeBundle, ResolvedRecipe } from "./schema";
 import { ContentError, validateContent, type RecipeFile } from "./validate";
 
 const CONTENT_DIR = path.join(process.cwd(), "content");
@@ -48,4 +48,8 @@ let cached: RecipeBundle | undefined;
 export function getRecipeBundle(): RecipeBundle {
   cached ??= loadRecipeBundle();
   return cached;
+}
+
+export function getRecipe(id: string): ResolvedRecipe | undefined {
+  return getRecipeBundle().recipes.find((recipe) => recipe.id === id);
 }
