@@ -30,7 +30,7 @@ A public, installable PWA of home bartending and barista recipes. There is no ba
 - **Build output**
   - One static page per recipe at `/recipes/[id]`, with JSON-LD `Recipe` data and Open Graph tags.
   - `recipes.json`: every recipe in one bundle, with the ingredient catalog already resolved and a content hash for versioning.
-- **Search:** a FlexSearch `Document` index built on the device from `recipes.json`. Field weights: name > ingredient names > tags > description.
+- **Search:** a FlexSearch `Document` index built on the device from `recipes.json`. Field weights: name > ingredient names > tags > description. FlexSearch only matches prefixes, so when it returns nothing we fall back to a small fuzzy matcher over recipe and ingredient names: edit distance ≤ 1 for words of 4–7 letters, ≤ 2 for 8 or more.
 - **Offline:** a hand-written service worker pre-caches the app shell, `recipes.json`, every recipe page and the illustrations. When the content hash changes, it shows an "update available" prompt.
 - **Local data** (favorites, notes, preferred units, guided sessions in progress): IndexedDB, with localStorage for small preferences.
 - **UI:** stock shadcn/ui on Tailwind 4, dark mode following the system setting.
@@ -58,7 +58,7 @@ A public, installable PWA of home bartending and barista recipes. There is no ba
 | `method`      | string                     | shake, stir, build, immersion, pour-over, espresso…     |
 | `glass`       | string?                    | cocktails                                               |
 | `equipment`   | string[]                   | shown on the prep checklist                             |
-| `brew`        | object?                    | coffee: `ratio`, `waterTempC`, `grind`                  |
+| `brew`        | object?                    | coffee: `waterTempC`, `grind`                           |
 | `ingredients` | Ingredient line[]          | see below                                               |
 | `steps`       | Step[]                     | see below                                               |
 | `illustration`| string \| null             | path under `public/illustrations/`                      |
@@ -79,8 +79,20 @@ A public, installable PWA of home bartending and barista recipes. There is no ba
 ### Scaling and units
 
 - Scale factor = chosen servings ÷ `serves`. It applies to ingredient amounts and step targets.
-- Cocktails: toggle between oz and ml (1 oz = 30 ml, rounded to practical jigger amounts). Oz amounts display as fractions (¼, ½, ¾).
-- Coffee: always grams. Water temperature has a °C/°F toggle.
+- Cocktails: toggle between oz and ml (1 oz = 30 ml). Converted ml amounts round to the nearest 5 ml, or to the nearest 2.5 ml below 15 ml (¾ oz → 25 ml, ¼ oz → 7.5 ml). Oz amounts display as fractions (¼, ½, ¾).
+- Dashes round to whole dashes (at least 1). Barspoons round to the nearest ½.
+- Coffee: always grams. Water temperature has a °C/°F toggle. The brew ratio isn't stored; it's derived from the coffee and water amounts (30 g : 450 g shows as 1:15).
+
+### Placeholder rendering
+
+| unit                  | example                         |
+| --------------------- | ------------------------------- |
+| `oz`, `ml`, `g`       | "1½ oz cognac", "450 g water"   |
+| `dash`, `barspoon`    | "2 dashes Angostura bitters"    |
+| `piece`               | "1 orange peel"                 |
+| `to-taste`            | "superfine sugar, to taste"     |
+
+`note` and `optional` show only in the ingredient list, never in step text.
 
 ## Features
 

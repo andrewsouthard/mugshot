@@ -7,7 +7,7 @@
   "serves": 1,
   "method": "immersion",
   "equipment": ["french press", "kettle", "burr grinder", "scale", "spoon"],
-  "brew": { "ratio": 15, "waterTempC": 95, "grind": "medium-coarse" },
+  "brew": { "waterTempC": 95, "grind": "medium-coarse" },
   "ingredients": [
     { "ingredient": "coffee-beans", "amount": 30, "unit": "g" },
     { "ingredient": "water", "amount": 450, "unit": "g", "note": "just off the boil" }
