@@ -1,0 +1,9 @@
+[
+  { "id": "cognac", "name": "cognac", "category": "spirit" },
+  { "id": "cointreau", "name": "Cointreau", "category": "liqueur" },
+  { "id": "lemon-juice", "name": "lemon juice", "category": "juice" },
+  { "id": "superfine-sugar", "name": "superfine sugar", "category": "sweetener" },
+  { "id": "orange-peel", "name": "orange peel", "category": "garnish" },
+  { "id": "coffee-beans", "name": "coffee beans", "category": "coffee" },
+  { "id": "water", "name": "water", "category": "water" }
+]

@@ -1,0 +1,29 @@
+{
+  "id": "french-press",
+  "name": "French Press",
+  "type": "coffee",
+  "description": "A clean, low-sediment French press: long steep, skim the crust, press gently.",
+  "tags": ["immersion", "hot", "beginner"],
+  "serves": 1,
+  "method": "immersion",
+  "equipment": ["french press", "kettle", "burr grinder", "scale", "spoon"],
+  "brew": { "ratio": 15, "waterTempC": 95, "grind": "medium-coarse" },
+  "ingredients": [
+    { "ingredient": "coffee-beans", "amount": 30, "unit": "g" },
+    { "ingredient": "water", "amount": 450, "unit": "g", "note": "just off the boil" }
+  ],
+  "steps": [
+    { "text": "Bring {water} to a boil, plus extra for preheating." },
+    { "text": "Grind {coffee-beans} medium-coarse." },
+    { "text": "Rinse the press with hot water to preheat it, then discard the water." },
+    { "text": "Add the grounds and place the press on the scale. Tare." },
+    { "text": "Pour all the water in quickly, wetting every ground.", "target": { "ingredient": "water", "amount": 450, "unit": "g" } },
+    { "text": "Steep. Don't stir.", "timer": { "kind": "countdown", "seconds": 240, "autoStart": true } },
+    { "text": "Break the crust with a spoon and skim off the foam and floating grounds." },
+    { "text": "Let the fines settle.", "timer": { "kind": "countdown", "seconds": 300, "autoStart": true } },
+    { "text": "Insert the plunger just to the surface of the coffee. Don't press down." },
+    { "text": "Pour slowly through the screen and stop before the last bit of sludge." }
+  ],
+  "illustration": null,
+  "source": { "name": "Adapted from James Hoffmann's French press technique" }
+}
