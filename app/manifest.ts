@@ -1,5 +1,8 @@
 import type { MetadataRoute } from "next";
 
+// Required to prerender this metadata route in a static export.
+export const dynamic = "force-static";
+
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Mugshot",

@@ -1,34 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Static export for Cloudflare Pages. Response headers live in public/_headers.
+  output: "export",
   experimental: {
     agentFeedback: true,
     useOffline: true,
-  },
-  cacheComponents: true,
-  partialPrefetching: true,
-  async headers() {
-    return [
-      {
-        // Always revalidate the service worker so updates roll out promptly.
-        source: "/sw.js",
-        headers: [
-          {
-            key: "Content-Type",
-            value: "application/javascript; charset=utf-8",
-          },
-          {
-            key: "Cache-Control",
-            value: "no-cache, no-store, must-revalidate",
-          },
-          {
-            key: "Content-Security-Policy",
-            value: "default-src 'self'; script-src 'self'",
-          },
-        ],
-      },
-    ];
   },
   turbopack: {
     rules: {

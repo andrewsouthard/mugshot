@@ -1,6 +1,9 @@
 import { ImageResponse } from "next/og";
 import { IconArtwork } from "./icon-artwork";
 
+// Required to prerender this metadata route in a static export.
+export const dynamic = "force-static";
+
 const SIZES = [192, 512];
 
 export function generateImageMetadata() {
