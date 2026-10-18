@@ -1,0 +1,28 @@
+{
+  "id": "sidecar",
+  "name": "Sidecar",
+  "type": "cocktail",
+  "description": "A bright, brandy-based sour from the 1920s: cognac, orange liqueur and lemon.",
+  "tags": ["classic", "sour", "shaken", "brandy"],
+  "serves": 1,
+  "glass": "coupe",
+  "method": "shake",
+  "equipment": ["shaker", "jigger", "hawthorne strainer", "fine strainer"],
+  "ingredients": [
+    { "ingredient": "cognac", "amount": 1.5, "unit": "oz" },
+    { "ingredient": "cointreau", "amount": 0.75, "unit": "oz" },
+    { "ingredient": "lemon-juice", "amount": 0.75, "unit": "oz", "note": "freshly squeezed" },
+    { "ingredient": "superfine-sugar", "unit": "to-taste", "note": "for the rim", "optional": true },
+    { "ingredient": "orange-peel", "amount": 1, "unit": "piece", "note": "for garnish" }
+  ],
+  "steps": [
+    { "text": "Chill a coupe with ice and water while you build the drink." },
+    { "text": "Optional: dump the coupe, moisten half the rim with lemon and dip it in {superfine-sugar}." },
+    { "text": "Add {cognac}, {cointreau} and {lemon-juice} to the shaker." },
+    { "text": "Fill the shaker with ice and shake hard.", "timer": { "kind": "countdown", "seconds": 12, "autoStart": false } },
+    { "text": "Double strain into the coupe." },
+    { "text": "Express {orange-peel} over the drink and garnish." }
+  ],
+  "illustration": null,
+  "source": { "name": "Harry MacElhone, Harry's ABC of Mixing Cocktails (1922)" }
+}
