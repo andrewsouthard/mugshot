@@ -21,7 +21,8 @@ export type DisplayOptions = {
 
 type Quantity = { amount?: number; unit: Unit };
 
-const ML_PER_OZ = 30;
+/** Bar convention, not the exact 29.57, so specs round-trip cleanly. */
+export const ML_PER_OZ = 30;
 
 const FRACTIONS: Record<number, string> = { 0.25: "¼", 0.5: "½", 0.75: "¾" };
 
@@ -88,22 +89,31 @@ export function scaleQuantity<Q extends Quantity>(
   return { ...quantity, amount: value, unit: nextUnit } as Q;
 }
 
-/** "1½ oz", "25 ml", "2 dashes", "½ barspoon", "1" (pieces), "" (to taste). */
-export function formatQuantity({ amount, unit }: Quantity): string {
-  if (amount === undefined || unit === "to-taste") return "";
+/**
+ * The number and unit label separately, for layouts that set them apart.
+ * Both are "" for to-taste; the label is "" for pieces.
+ */
+export function quantityParts({ amount, unit }: Quantity): { value: string; unit: string } {
+  if (amount === undefined || unit === "to-taste") return { value: "", unit: "" };
   switch (unit) {
     case "oz":
-      return `${formatFraction(amount)} oz`;
+      return { value: formatFraction(amount), unit: "oz" };
     case "ml":
     case "g":
-      return `${formatDecimal(amount)} ${unit}`;
+      return { value: formatDecimal(amount), unit };
     case "dash":
-      return `${formatDecimal(amount)} ${amount === 1 ? "dash" : "dashes"}`;
+      return { value: formatDecimal(amount), unit: amount === 1 ? "dash" : "dashes" };
     case "barspoon":
-      return `${formatFraction(amount)} ${amount <= 1 ? "barspoon" : "barspoons"}`;
+      return { value: formatFraction(amount), unit: amount <= 1 ? "barspoon" : "barspoons" };
     case "piece":
-      return formatFraction(amount);
+      return { value: formatFraction(amount), unit: "" };
   }
+}
+
+/** "1½ oz", "25 ml", "2 dashes", "½ barspoon", "1" (pieces), "" (to taste). */
+export function formatQuantity(quantity: Quantity): string {
+  const { value, unit } = quantityParts(quantity);
+  return unit ? `${value} ${unit}` : value;
 }
 
 /** "1½ oz cognac", "1 orange peel", "superfine sugar, to taste". */

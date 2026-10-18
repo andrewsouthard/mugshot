@@ -54,8 +54,10 @@ All tokens live in `app/globals.css` and are exposed as Tailwind utilities.
   makes the default Button black.
 - **Feedback:** `success`, `warning`, `danger`
 - **Liquid:** `liquid-{spirit, clear, liqueur, fortified, citrus, syrup, bitters, coffee, milk, foam, water, soda}`.
-  These are keyed to ingredient kind. Only the glass, ratio bars and swatches
-  use them.
+  These are keyed to the ingredient `category` in `content/ingredients.json`.
+  `liquidColor()` in `components/ui/swatch.tsx` maps categories that don't
+  share a name (`juice` → citrus, `sweetener` → syrup) and falls back to
+  spirit. Only the glass, ratio bars and swatches use them.
 - **Shape:** `rounded-card` (0.75rem), `rounded-control` (0.625rem), `shadow-lift` (hover only). Use borders, not shadows, for structure.
 - **Type:** Inter Tight for everything (headings bold with tight tracking),
   plus two custom utilities: `measure` (JetBrains Mono, tabular figures, for
@@ -73,15 +75,16 @@ Components never use raw hex values or Tailwind's stock palette.
 ## Measures
 
 Recipes store amounts the way they're written (`¾ oz`, `18 g`, `2 dash`). They
-are converted only for display, in `lib/units.ts`.
+are scaled and converted only for display, in `lib/recipe/format.ts`
+(`scaleQuantity`, then `formatQuantity` for a string or `quantityParts` for
+the number and unit separately).
 
 - 1 oz = 30 ml, the bar convention, so specs round-trip cleanly.
-- Ounces round to the nearest ¼ and display as fractions (`1 ¾`).
-- Millilitres round to 2.5 below 60 ml (¾ oz → 22.5 ml) and to 5 above that.
+- Ounces round to the nearest ¼ and display as fractions (`1½`).
+- Millilitres round to 5, or 2.5 below 15 ml (¾ oz → 25 ml).
 - Grams never convert, because coffee is always weighed.
-- Counts (dash, barspoon, drop) round to whole numbers when scaled, with a
-  minimum of 1.
-- `top` has no amount and renders as "Top".
+- Dashes round to whole numbers when scaled; barspoons and pieces to halves.
+- `to-taste` has no amount.
 
 ## Components
 
@@ -92,26 +95,26 @@ server-safe.
 | --- | --- |
 | `Button` | shadcn; `default` (black), `outline`, `secondary`, `ghost`. Never grapefruit. |
 | `Logo`, `MugMark` | wordmark and mug mark |
-| `Tag` | method, glass and flavor labels |
-| `Card` | base surface |
-| `Swatch` | liquid-colored dot for an ingredient kind |
-| `GlassFill`, `RecipeGlass` | glassware illustration (8 vessels, optional ice) |
+| `Badge` | shadcn; method, glass and flavor labels. `brand` (grapefruit) is our addition. |
+| `Card` | shadcn Card (`CardHeader`, `CardContent`, …) |
+| `Swatch` | liquid-colored dot for an ingredient category |
+| `GlassFill`, `RecipeGlass` | glassware illustration (8 vessels, optional ice). Coffee recipes are drawn as brewed coffee. |
 | `RatioBar` | proportions as a stacked bar with legend |
 | `IngredientList` | the spec: mono amount column, swatch, note |
-| `StepList` | numbered method with timer chips |
-| `Stat`, `BrewSpecGrid` | dial-in numbers: dose, yield, ratio, time, temp, grind |
-| `FlavorProfile` | five 5-pip meters |
+| `StepList` | numbered method with timer and target chips |
+| `Stat`, `BrewSpecGrid` | dial-in numbers: dose, water, ratio, temp, grind |
+| `FlavorProfile` | five 5-pip meters (recipes don't carry a profile yet) |
 | `SpecList` | key/value facts: glass, ice, garnish |
 | `RecipeCard` | recipe summary card; pass `href` to make it a link |
-| `Segmented` _(client)_ | radio pill switch |
+| `ToggleGroup` _(client)_ | shadcn; units, modes, filters. Use `variant="outline" spacing={0}` and ignore presses that leave nothing selected. |
 | `Stepper` _(client)_ | − n + |
 | `RecipeWorkbench` _(client)_ | `IngredientList` + servings stepper + oz/ml toggle |
 | `BrewTimer` _(client)_ | timer with a target window: grapefruit below it, green inside, amber past it |
 | `ModeSwitch` _(client)_ | Auto / Café / Bar |
 
-## Adding a recipe
+## Data
 
-Add an entry to `recipes` in `lib/drinks.ts`. Give each ingredient a `kind` so
-it gets a liquid color. Set `duration` on a step to show a timer chip.
-Coffee recipes take a `brew` spec. If the glass holds something different from
-the inputs (beans and water in, coffee out), set `served`.
+Components take the content types from `lib/content/schema.ts`
+(`ResolvedRecipe`, `ResolvedIngredientLine`, `Step`) and use `cn` from the
+`cn` package. Recipes live in `content/recipes/*.json`; see `SPEC.md` for the
+format.

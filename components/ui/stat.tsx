@@ -1,7 +1,11 @@
 import type { ReactNode } from "react";
-import type { BrewSpec } from "@/lib/drinks";
-import { formatDurationRange, formatRatio } from "@/lib/units";
-import { cn } from "@/lib/cn";
+import { cn } from "cn";
+import type { ResolvedRecipe } from "@/lib/content/schema";
+import {
+  brewRatio,
+  formatTemperature,
+  type TemperatureUnit,
+} from "@/lib/recipe/format";
 
 /** A single dial-in number. */
 export function Stat({
@@ -36,32 +40,33 @@ export function Stat({
   );
 }
 
-/** Barista parameters: dose → yield, ratio, time, temperature, grind. */
+/** Barista parameters: dose, water, ratio, temperature, grind. */
 export function BrewSpecGrid({
-  brew,
+  recipe,
+  temperature = "C",
   className,
 }: {
-  brew: BrewSpec;
+  recipe: Pick<ResolvedRecipe, "brew" | "ingredients">;
+  temperature?: TemperatureUnit;
   className?: string;
 }) {
+  const { brew, ingredients } = recipe;
+  if (!brew) return null;
+  const grams = (category: string) =>
+    ingredients.find((line) => line.category === category && line.unit === "g")?.amount;
+  const dose = grams("coffee");
+  const water = grams("water");
+  const ratio = brewRatio(recipe);
   return (
     <div className={cn("grid grid-cols-2 gap-2 sm:grid-cols-3", className)}>
-      <Stat label="Dose" value={brew.dose} unit="g" />
-      <Stat label="Yield" value={brew.yield} unit="g" />
-      <Stat label="Ratio" value={formatRatio(brew.dose, brew.yield)} emphasis />
-      {brew.time && (
-        <Stat
-          label="Time"
-          value={formatDurationRange(brew.time)}
-        />
-      )}
-      {brew.temp && <Stat label="Temp" value={brew.temp} unit="°C" />}
-      {brew.grind && (
-        <Stat
-          label="Grind"
-          value={<span className="font-sans text-base">{brew.grind}</span>}
-        />
-      )}
+      {dose !== undefined && <Stat label="Dose" value={dose} unit="g" />}
+      {water !== undefined && <Stat label="Water" value={water} unit="g" />}
+      {ratio && <Stat label="Ratio" value={ratio} emphasis />}
+      <Stat label="Temp" value={formatTemperature(brew.waterTempC, temperature)} />
+      <Stat
+        label="Grind"
+        value={<span className="inline-block font-sans text-base first-letter:uppercase">{brew.grind}</span>}
+      />
     </div>
   );
 }

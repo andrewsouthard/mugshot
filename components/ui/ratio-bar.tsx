@@ -1,6 +1,6 @@
-import type { Ingredient } from "@/lib/drinks";
+import { cn } from "cn";
+import type { ResolvedIngredientLine } from "@/lib/content/schema";
 import { layersFor } from "./glass";
-import { cn } from "@/lib/cn";
 
 /** Proportions at a glance — the shape of a drink, independent of glass. */
 export function RatioBar({
@@ -8,7 +8,7 @@ export function RatioBar({
   showLegend = true,
   className,
 }: {
-  ingredients: Ingredient[];
+  ingredients: ResolvedIngredientLine[];
   showLegend?: boolean;
   className?: string;
 }) {

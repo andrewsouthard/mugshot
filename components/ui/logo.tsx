@@ -1,4 +1,4 @@
-import { cn } from "@/lib/cn";
+import { cn } from "cn";
 
 /** Solid mug; the grapefruit line at the rim is the coffee. */
 export function MugMark({ className }: { className?: string }) {

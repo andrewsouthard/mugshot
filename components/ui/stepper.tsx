@@ -1,6 +1,6 @@
 "use client";
 
-import { cn } from "@/lib/cn";
+import { cn } from "cn";
 
 /** − 2 + — for servings and batch sizes. */
 export function Stepper({

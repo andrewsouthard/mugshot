@@ -1,18 +1,19 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import {
-  getRecipe,
-  glassLabel,
-  kindLabel,
-  methodLabel,
-  type IngredientKind,
-} from "@/lib/drinks";
-import { formatMeasure } from "@/lib/units";
+import { getRecipe } from "@/lib/content/load";
+import type { Unit } from "@/lib/content/schema";
+import { quantityParts, scaleQuantity, type VolumeUnit } from "@/lib/recipe/format";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Tag } from "@/components/ui/tag";
 import { Card } from "@/components/ui/card";
-import { GlassFill, glassNames, RecipeGlass } from "@/components/ui/glass";
-import { liquidColor } from "@/components/ui/swatch";
+import {
+  GlassFill,
+  glassLabel,
+  glassNames,
+  RecipeGlass,
+  type GlassName,
+} from "@/components/ui/glass";
+import { liquids } from "@/components/ui/swatch";
 import { RecipeWorkbench } from "@/components/ui/recipe-workbench";
 import { RatioBar } from "@/components/ui/ratio-bar";
 import { StepList } from "@/components/ui/step-list";
@@ -22,15 +23,12 @@ import { BrewTimer } from "@/components/ui/brew-timer";
 import { RecipeCard } from "@/components/ui/recipe-card";
 import { Logo } from "@/components/ui/logo";
 import { ModeSwitch } from "@/components/ui/mode-switch";
-import { SegmentedDemo, StepperDemo } from "./demos";
+import { StepperDemo, ToggleGroupDemo } from "./demos";
 
 export const metadata: Metadata = { title: "Design system" };
 
-const daiquiri = getRecipe("daiquiri")!;
-const flatWhite = getRecipe("flat-white")!;
-const espresso = getRecipe("espresso")!;
-const oldFashioned = getRecipe("old-fashioned")!;
-const negroni = getRecipe("negroni")!;
+const sidecar = getRecipe("sidecar")!;
+const frenchPress = getRecipe("french-press")!;
 
 const NAV = [
   ["principles", "Principles"],
@@ -111,8 +109,8 @@ export default function DesignSystemPage() {
           <div className="grid gap-4 md:grid-cols-2">
             {(
               [
-                ["cafe", "Café", "White · black ink · grapefruit", flatWhite],
-                ["bar", "Bar", "Black · white ink · grapefruit", negroni],
+                ["cafe", "Café", "White · black ink · grapefruit", frenchPress],
+                ["bar", "Bar", "Black · white ink · grapefruit", sidecar],
               ] as const
             ).map(([mode, name, desc, recipe]) => (
               <div
@@ -134,8 +132,14 @@ export default function DesignSystemPage() {
                       </Button>
                     </div>
                     <div className="flex flex-wrap gap-1.5">
-                      <Tag tone="brand">{methodLabel[recipe.method]}</Tag>
-                      <Tag tone="outline">{glassLabel[recipe.glass]}</Tag>
+                      <Badge variant="brand" className="capitalize">
+                        {recipe.method}
+                      </Badge>
+                      {recipe.glass && (
+                        <Badge variant="outline">
+                          {glassLabel[recipe.glass as GlassName] ?? recipe.glass}
+                        </Badge>
+                      )}
                     </div>
                     <RatioBar
                       ingredients={recipe.ingredients}
@@ -182,26 +186,24 @@ export default function DesignSystemPage() {
 
           <h3 className="eyebrow mt-12 mb-4">Liquid palette</h3>
           <p className="mb-5 max-w-2xl text-sm text-ink-muted">
-            Keyed to ingredient kind, not brand. Used by the glass illustration,
-            ratio bars and ingredient swatches — the only place saturated color
-            appears in the UI.
+            Keyed to ingredient category, not brand. Used by the glass
+            illustration, ratio bars and ingredient swatches — the only place
+            saturated color appears in the UI.
           </p>
           <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6">
-            {(Object.keys(liquidColor) as IngredientKind[])
-              .filter((k) => k !== "garnish")
-              .map((kind) => (
-                <div key={kind} className="flex items-center gap-3">
-                  <Droplet color={liquidColor[kind]} />
-                  <div className="min-w-0">
-                    <div className="truncate text-sm font-medium">
-                      {kindLabel[kind]}
-                    </div>
-                    <div className="measure truncate text-[11px] text-ink-faint">
-                      liquid-{kind}
-                    </div>
+            {liquids.map((liquid) => (
+              <div key={liquid} className="flex items-center gap-3">
+                <Droplet color={`var(--liquid-${liquid})`} />
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-medium capitalize">
+                    {liquid}
+                  </div>
+                  <div className="measure truncate text-[11px] text-ink-faint">
+                    liquid-{liquid}
                   </div>
                 </div>
-              ))}
+              </div>
+            ))}
           </div>
         </Section>
 
@@ -223,7 +225,7 @@ export default function DesignSystemPage() {
             </TypeRow>
             <TypeRow token="measure" spec="JetBrains Mono · tabular figures">
               <span className="measure text-2xl">
-                ¾ oz · 22.5 ml · 1:2 · 27–32s · 93 °C
+                ¾ oz · 25 ml · 1:15 · 4:00 · 95 °C
               </span>
             </TypeRow>
             <TypeRow token="eyebrow" spec="11 / 0.14em / uppercase">
@@ -236,7 +238,7 @@ export default function DesignSystemPage() {
         <Section
           id="measures"
           title="Measures"
-          lede="Recipes store amounts as written and convert at display time. Volumes round to the nearest ¼ oz, or 2.5 ml (5 ml above 60). Grams never convert. Counts round to whole numbers when scaled."
+          lede="Recipes store amounts as written and convert at display time, in lib/recipe/format.ts. Volumes round to the nearest ¼ oz, or 5 ml (2.5 ml below 15). Grams never convert. Dashes round to whole numbers when scaled; barspoons and pieces to halves."
         >
           <div className="overflow-x-auto rounded-card border border-line bg-surface">
             <table className="w-full text-sm">
@@ -250,32 +252,16 @@ export default function DesignSystemPage() {
                 </tr>
               </thead>
               <tbody className="measure divide-y divide-line">
-                {(
-                  [
-                    { amount: 0.75, unit: "oz" },
-                    { amount: 1.5, unit: "oz" },
-                    { amount: 120, unit: "ml" },
-                    { amount: 18, unit: "g" },
-                    { amount: 2, unit: "dash" },
-                    { amount: 1, unit: "barspoon" },
-                    { unit: "top" },
-                  ] as const
-                ).map((m, i) => (
+                {MEASURES.map((m, i) => (
                   <tr key={i}>
                     <td className="px-5 py-2.5 text-ink-muted">
-                      {"amount" in m ? `${m.amount} ${m.unit}` : m.unit}
+                      {m.amount === undefined ? m.unit : `${m.amount} ${m.unit}`}
                     </td>
-                    {(
-                      [
-                        ["oz", 1],
-                        ["ml", 1],
-                        ["oz", 3],
-                      ] as const
-                    ).map(([sys, scale], j) => {
-                      const f = formatMeasure(m, sys, scale);
+                    {MEASURE_COLUMNS.map(([volume, scale], j) => {
+                      const f = quantityParts(scaleQuantity(m, { scale, volume }));
                       return (
                         <td key={j} className="px-5 py-2.5">
-                          {f.value}
+                          {f.value || "—"}
                           {f.unit && (
                             <span className="ml-1 text-ink-muted">
                               {f.unit}
@@ -308,14 +294,11 @@ export default function DesignSystemPage() {
             ))}
           </div>
           <div className="mt-8 flex flex-wrap items-end gap-8 rounded-card border border-line bg-surface p-6">
-            <RecipeGlass recipe={daiquiri} size={96} />
-            <RecipeGlass recipe={oldFashioned} size={96} />
-            <RecipeGlass recipe={getRecipe("paloma")!} size={96} />
-            <RecipeGlass recipe={flatWhite} size={96} />
-            <RecipeGlass recipe={espresso} size={96} />
+            <RecipeGlass recipe={sidecar} size={96} />
+            <RecipeGlass recipe={frenchPress} size={96} />
             <div className="flex items-end gap-3 border-l border-line pl-8">
               {[48, 32, 24].map((s) => (
-                <RecipeGlass key={s} recipe={negroni} size={s} />
+                <RecipeGlass key={s} recipe={sidecar} size={s} />
               ))}
             </div>
           </div>
@@ -347,18 +330,26 @@ export default function DesignSystemPage() {
               </div>
             </Specimen>
 
-            <Specimen name="Tag" file="ui/tag.tsx">
+            <Specimen
+              name="Badge"
+              file="ui/badge.tsx"
+              note="shadcn Badge with an added brand variant for methods and highlights."
+            >
               <div className="flex flex-wrap gap-1.5">
-                <Tag tone="brand">Shaken</Tag>
-                <Tag tone="brand">Pour-over</Tag>
-                <Tag>Citrus-forward</Tag>
-                <Tag tone="outline">Coupe</Tag>
-                <Tag tone="outline">Large cube</Tag>
+                <Badge variant="brand">Shaken</Badge>
+                <Badge variant="brand">Pour-over</Badge>
+                <Badge variant="secondary">Citrus-forward</Badge>
+                <Badge variant="outline">Coupe</Badge>
+                <Badge variant="outline">Large cube</Badge>
               </div>
             </Specimen>
 
-            <Specimen name="Segmented" file="ui/segmented.tsx">
-              <SegmentedDemo />
+            <Specimen
+              name="ToggleGroup"
+              file="ui/toggle-group.tsx"
+              note="shadcn ToggleGroup, outline at spacing 0. Ignore presses that would leave nothing selected."
+            >
+              <ToggleGroupDemo />
             </Specimen>
 
             <Specimen name="Stepper" file="ui/stepper.tsx">
@@ -370,42 +361,53 @@ export default function DesignSystemPage() {
               file="ui/recipe-workbench.tsx"
               note="Mono amount column, liquid swatch, optional note. RecipeWorkbench adds the servings stepper and oz/ml toggle; use IngredientList on its own for a static spec."
             >
-              <RecipeWorkbench ingredients={daiquiri.ingredients} />
+              <RecipeWorkbench ingredients={sidecar.ingredients} serves={sidecar.serves} />
             </Specimen>
 
             <Specimen
               name="RatioBar"
               file="ui/ratio-bar.tsx"
-              note="Dashes and drops are seasoning, so they don't take up volume."
+              note="Dashes, pieces and garnishes are seasoning, so they don't take up volume."
             >
               <div className="space-y-6">
-                <RatioBar ingredients={negroni.ingredients} />
-                <RatioBar ingredients={flatWhite.ingredients} />
+                <RatioBar ingredients={sidecar.ingredients} />
+                <RatioBar ingredients={frenchPress.ingredients} />
               </div>
             </Specimen>
 
             <Specimen name="Stat · BrewSpecGrid" file="ui/stat.tsx">
-              <BrewSpecGrid brew={espresso.brew!} />
+              <BrewSpecGrid recipe={frenchPress} />
               <div className="mt-2 grid grid-cols-3 gap-2">
                 <Stat label="ABV" value="21" unit="%" />
-                <Stat label="Volume" value="4 ¼" unit="oz" />
+                <Stat label="Volume" value="4¼" unit="oz" />
                 <Stat label="Caffeine" value="~130" unit="mg" />
               </div>
             </Specimen>
 
-            <Specimen name="FlavorProfile" file="ui/flavor-profile.tsx">
+            <Specimen
+              name="FlavorProfile"
+              file="ui/flavor-profile.tsx"
+              note="Recipes don't carry a profile yet; these are sample values."
+            >
               <div className="grid grid-cols-2 gap-8">
-                <FlavorProfile profile={negroni.profile} />
-                <FlavorProfile profile={flatWhite.profile} />
+                <FlavorProfile
+                  profile={{ sweet: 3, sour: 0, bitter: 5, strong: 4, body: 3 }}
+                />
+                <FlavorProfile
+                  profile={{ sweet: 3, sour: 1, bitter: 2, strong: 3, body: 4 }}
+                />
               </div>
             </Specimen>
 
             <Specimen
               name="StepList"
               file="ui/step-list.tsx"
-              note="Steps with a duration get a timer chip."
+              note="Steps with a timer or a target weight get a chip."
             >
-              <StepList steps={espresso.steps} />
+              <StepList
+                steps={frenchPress.steps}
+                ingredients={frenchPress.ingredients}
+              />
             </Specimen>
 
             <Specimen
@@ -423,8 +425,8 @@ export default function DesignSystemPage() {
 
           <h3 className="eyebrow mt-12 mb-4">RecipeCard</h3>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {[daiquiri, oldFashioned, flatWhite, espresso].map((r) => (
-              <RecipeCard key={r.slug} recipe={r} />
+            {[sidecar, frenchPress].map((r) => (
+              <RecipeCard key={r.id} recipe={r} href={`/recipes/${r.id}`} />
             ))}
           </div>
         </Section>
@@ -432,7 +434,7 @@ export default function DesignSystemPage() {
         {/* ---------------------------------------------------------------- */}
         <Section id="shape" title="Shape & elevation">
           <div className="grid gap-4 sm:grid-cols-3">
-            <Card className="p-5">
+            <Card className="gap-0 p-5">
               <div className="eyebrow">radius-card</div>
               <p className="measure mt-1 text-sm">12px · cards, panels</p>
             </Card>
@@ -450,6 +452,23 @@ export default function DesignSystemPage() {
     </>
   );
 }
+
+const MEASURES: Array<{ amount?: number; unit: Unit }> = [
+  { amount: 0.75, unit: "oz" },
+  { amount: 1.5, unit: "oz" },
+  { amount: 45, unit: "ml" },
+  { amount: 18, unit: "g" },
+  { amount: 2, unit: "dash" },
+  { amount: 1, unit: "barspoon" },
+  { amount: 1, unit: "piece" },
+  { unit: "to-taste" },
+];
+
+const MEASURE_COLUMNS: Array<[VolumeUnit, number]> = [
+  ["oz", 1],
+  ["ml", 1],
+  ["oz", 3],
+];
 
 function Section({
   id,
@@ -481,7 +500,7 @@ function Principle({
   children: ReactNode;
 }) {
   return (
-    <Card className="p-5">
+    <Card className="gap-0 p-5">
       <span className="measure text-xs text-brand-strong">{n}</span>
       <h3 className="mt-2 text-xl font-bold tracking-tight">{title}</h3>
       <p className="mt-2 text-sm leading-relaxed text-ink-muted">{children}</p>
@@ -566,7 +585,7 @@ function Specimen({
   children: ReactNode;
 }) {
   return (
-    <Card className="flex flex-col">
+    <Card className="gap-0 py-0">
       <div className="flex items-baseline justify-between border-b border-line px-5 py-3">
         <h3 className="font-medium">{name}</h3>
         <span className="measure text-[11px] text-ink-faint">

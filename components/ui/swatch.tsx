@@ -1,28 +1,46 @@
-import type { IngredientKind } from "@/lib/drinks";
-import { cn } from "@/lib/cn";
+import { cn } from "cn";
 
-export const liquidColor: Record<IngredientKind, string> = {
-  spirit: "var(--liquid-spirit)",
-  clear: "var(--liquid-clear)",
-  liqueur: "var(--liquid-liqueur)",
-  fortified: "var(--liquid-fortified)",
-  citrus: "var(--liquid-citrus)",
-  syrup: "var(--liquid-syrup)",
-  bitters: "var(--liquid-bitters)",
-  coffee: "var(--liquid-coffee)",
-  milk: "var(--liquid-milk)",
-  foam: "var(--liquid-foam)",
-  water: "var(--liquid-water)",
-  soda: "var(--liquid-soda)",
-  garnish: "var(--success)",
+export const liquids = [
+  "spirit",
+  "clear",
+  "liqueur",
+  "fortified",
+  "citrus",
+  "syrup",
+  "bitters",
+  "coffee",
+  "milk",
+  "foam",
+  "water",
+  "soda",
+] as const;
+
+export type Liquid = (typeof liquids)[number];
+
+/**
+ * Ingredient categories (from `content/ingredients.json`) that don't share a
+ * name with their liquid. Anything else unknown falls back to `spirit`.
+ */
+const CATEGORY_LIQUID: Record<string, Liquid> = {
+  juice: "citrus",
+  sweetener: "syrup",
 };
+
+/** The liquid-* token for an ingredient category. */
+export function liquidColor(category: string): string {
+  if (category === "garnish") return "var(--success)";
+  const liquid =
+    CATEGORY_LIQUID[category] ??
+    (liquids.includes(category as Liquid) ? (category as Liquid) : "spirit");
+  return `var(--liquid-${liquid})`;
+}
 
 /** A droplet of the ingredient's liquid color. */
 export function Swatch({
-  kind,
+  category,
   className,
 }: {
-  kind: IngredientKind;
+  category: string;
   className?: string;
 }) {
   return (
@@ -32,7 +50,7 @@ export function Swatch({
         "inline-block size-2.5 shrink-0 rounded-full ring-1 ring-ink/15 ring-inset",
         className,
       )}
-      style={{ background: liquidColor[kind] }}
+      style={{ background: liquidColor(category) }}
     />
   );
 }

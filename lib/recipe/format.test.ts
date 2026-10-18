@@ -7,6 +7,7 @@ import {
   formatQuantity,
   formatTarget,
   formatTemperature,
+  quantityParts,
   renderStepText,
   scaleQuantity,
   stepIngredientIds,
@@ -74,6 +75,15 @@ describe("scaling and units", () => {
 
   it("doesn't convert grams", () => {
     expect(quantity(inMl, 30, "g")).toBe("30 g");
+  });
+});
+
+describe("quantityParts", () => {
+  it("splits the number from the unit label", () => {
+    expect(quantityParts({ amount: 1.5, unit: "oz" })).toEqual({ value: "1½", unit: "oz" });
+    expect(quantityParts({ amount: 2, unit: "dash" })).toEqual({ value: "2", unit: "dashes" });
+    expect(quantityParts({ amount: 1, unit: "piece" })).toEqual({ value: "1", unit: "" });
+    expect(quantityParts({ unit: "to-taste" })).toEqual({ value: "", unit: "" });
   });
 });
 

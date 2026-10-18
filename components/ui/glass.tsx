@@ -1,9 +1,35 @@
 import { useId } from "react";
-import type { Glass as GlassName, Ingredient, Recipe } from "@/lib/drinks";
-import { glassLabel } from "@/lib/drinks";
-import { volumeMl } from "@/lib/units";
+import { cn } from "cn";
+import type { ResolvedIngredientLine, ResolvedRecipe } from "@/lib/content/schema";
+import { ML_PER_OZ } from "@/lib/recipe/format";
 import { liquidColor } from "./swatch";
-import { cn } from "@/lib/cn";
+
+export type GlassName =
+  | "coupe"
+  | "nick-and-nora"
+  | "martini"
+  | "rocks"
+  | "highball"
+  | "mug"
+  | "cup"
+  | "latte";
+
+export type Ice = "cubed" | "large cube" | "crushed" | "none";
+
+export const glassLabel: Record<GlassName, string> = {
+  coupe: "Coupe",
+  "nick-and-nora": "Nick & Nora",
+  martini: "Martini",
+  rocks: "Rocks",
+  highball: "Highball",
+  mug: "Mug",
+  cup: "Cup & saucer",
+  latte: "Latte glass",
+};
+
+function isGlassName(glass: string | undefined): glass is GlassName {
+  return glass !== undefined && glass in glassLabel;
+}
 
 /**
  * Glassware drawn on a 64×80 grid. `outline` is stroked; `bowl` is the
@@ -66,13 +92,29 @@ const GLASSES: Record<GlassName, Geometry> = {
 
 export type Layer = { color: string; ml: number; label?: string };
 
+/** Approximate liquid volume. Dashes and pieces are seasoning, not volume. */
+function volumeMl({ amount = 0, unit, category }: ResolvedIngredientLine) {
+  if (category === "garnish") return 0;
+  switch (unit) {
+    case "oz":
+      return amount * ML_PER_OZ;
+    case "ml":
+    case "g":
+      return amount;
+    case "barspoon":
+      return amount * 5;
+    default:
+      return 0;
+  }
+}
+
 /** Layers from an ingredient list, bottom of the glass first. */
-export function layersFor(ingredients: Ingredient[]): Layer[] {
+export function layersFor(ingredients: ResolvedIngredientLine[]): Layer[] {
   return ingredients
-    .map((ing) => ({
-      color: liquidColor[ing.kind],
-      ml: volumeMl(ing),
-      label: ing.name,
+    .map((line) => ({
+      color: liquidColor(line.category),
+      ml: volumeMl(line),
+      label: line.name,
     }))
     .filter((l) => l.ml > 0);
 }
@@ -94,7 +136,7 @@ export function GlassFill({
   layers?: Layer[];
   /** 0–1, how far from bottom to top the liquid reaches */
   level?: number;
-  ice?: Recipe["ice"];
+  ice?: Ice;
   size?: number;
   title?: string;
   className?: string;
@@ -166,7 +208,7 @@ function Ice({
   g,
   surface,
 }: {
-  kind: NonNullable<Recipe["ice"]>;
+  kind: Ice;
   g: Geometry;
   surface: number;
 }) {
@@ -206,28 +248,36 @@ function Ice({
   );
 }
 
-/** A recipe's glass, pre-filled with its ingredients. */
+/**
+ * A recipe's glass, pre-filled with its ingredients. Coffee goes in as beans
+ * and water but comes out as coffee, so it's drawn as one coffee layer.
+ * Unknown or missing glasses fall back to a mug for coffee, rocks otherwise.
+ */
 export function RecipeGlass({
   recipe,
   size,
   className,
 }: {
-  recipe: Recipe;
+  recipe: Pick<ResolvedRecipe, "name" | "type" | "glass" | "ingredients">;
   size?: number;
   className?: string;
 }) {
+  const glass = isGlassName(recipe.glass)
+    ? recipe.glass
+    : recipe.type === "coffee"
+      ? "mug"
+      : "rocks";
+  const layers = layersFor(recipe.ingredients);
   return (
     <GlassFill
-      glass={recipe.glass}
+      glass={glass}
       layers={
-        recipe.served
-          ? recipe.served.map((l) => ({ color: liquidColor[l.kind], ml: l.ml }))
-          : layersFor(recipe.ingredients)
+        recipe.type === "coffee"
+          ? [{ color: liquidColor("coffee"), ml: layers.reduce((sum, l) => sum + l.ml, 0) }]
+          : layers
       }
-      level={recipe.fill}
-      ice={recipe.ice}
       size={size}
-      title={`${recipe.name} in a ${glassLabel[recipe.glass].toLowerCase()} glass`}
+      title={`${recipe.name} in a ${glassLabel[glass].toLowerCase()} glass`}
       className={className}
     />
   );

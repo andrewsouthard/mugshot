@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { cn } from "cn";
+import { formatDuration } from "@/lib/recipe/format";
 import { Button } from "./button";
-import { formatDurationRange } from "@/lib/units";
-import { cn } from "@/lib/cn";
 
 type Status = "idle" | "running" | "stopped";
 
@@ -59,7 +59,7 @@ export function BrewTimer({
       <div className="flex items-baseline justify-between">
         <span className="eyebrow">{label}</span>
         <span className="measure text-xs text-ink-faint">
-          target {formatDurationRange(target)}
+          target {formatDuration(lo)}–{formatDuration(hi)}
         </span>
       </div>
 

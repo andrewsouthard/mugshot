@@ -1,5 +1,13 @@
-import type { Profile } from "@/lib/drinks";
-import { cn } from "@/lib/cn";
+import { cn } from "cn";
+
+/** 0–5 for each axis. */
+export type Profile = {
+  sweet: number;
+  sour: number;
+  bitter: number;
+  strong: number;
+  body: number;
+};
 
 const AXES: Array<[keyof Profile, string]> = [
   ["sweet", "Sweet"],

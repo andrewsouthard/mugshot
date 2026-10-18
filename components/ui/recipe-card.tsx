@@ -1,9 +1,8 @@
 import Link from "next/link";
-import type { Recipe } from "@/lib/drinks";
-import { glassLabel, methodLabel } from "@/lib/drinks";
-import { RecipeGlass } from "./glass";
-import { Tag } from "./tag";
-import { cn } from "@/lib/cn";
+import { cn } from "cn";
+import type { ResolvedRecipe } from "@/lib/content/schema";
+import { Badge } from "./badge";
+import { glassLabel, RecipeGlass, type GlassName } from "./glass";
 
 /** Pass href to make the whole card a link. */
 export function RecipeCard({
@@ -11,11 +10,12 @@ export function RecipeCard({
   href,
   className,
 }: {
-  recipe: Recipe;
+  recipe: ResolvedRecipe;
   href?: string;
   className?: string;
 }) {
   const Root = href ? Link : "div";
+  const glass = recipe.glass && (glassLabel[recipe.glass as GlassName] ?? recipe.glass);
   return (
     <Root
       href={href ?? ""}
@@ -25,9 +25,9 @@ export function RecipeCard({
       )}
     >
       <div className="relative flex h-36 items-end justify-center bg-sunken pb-3">
-        <Tag tone="brand" className="absolute top-3 left-3">
-          {methodLabel[recipe.method]}
-        </Tag>
+        <Badge variant="brand" className="absolute top-3 left-3 capitalize">
+          {recipe.method}
+        </Badge>
         <RecipeGlass
           recipe={recipe}
           size={80}
@@ -35,18 +35,17 @@ export function RecipeCard({
         />
       </div>
       <div className="flex flex-1 flex-col p-4">
-        <div className="flex items-baseline justify-between gap-3">
-          <h3 className="text-lg font-bold tracking-tight">{recipe.name}</h3>
-          <span className="measure text-xs text-ink-faint">
-            {recipe.minutes} min
-          </span>
-        </div>
+        <h3 className="text-lg font-bold tracking-tight">{recipe.name}</h3>
         <p className="mt-0.5 line-clamp-2 text-sm text-ink-muted">
-          {recipe.tagline}
+          {recipe.description}
         </p>
-        <div className="mt-auto pt-3">
-          <Tag tone="outline">{glassLabel[recipe.glass]}</Tag>
-        </div>
+        {glass && (
+          <div className="mt-auto pt-3">
+            <Badge variant="outline" className="capitalize">
+              {glass}
+            </Badge>
+          </div>
+        )}
       </div>
     </Root>
   );

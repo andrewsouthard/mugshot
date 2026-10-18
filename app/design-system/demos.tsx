@@ -1,34 +1,35 @@
 "use client";
 
 import { useState } from "react";
-import { Segmented } from "@/components/ui/segmented";
 import { Stepper } from "@/components/ui/stepper";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
-export function SegmentedDemo() {
-  const [unit, setUnit] = useState("oz");
-  const [family, setFamily] = useState("all");
+const SHELVES = [
+  ["all", "All"],
+  ["bar", "Bar"],
+  ["cafe", "Café"],
+] as const;
+
+export function ToggleGroupDemo() {
+  const [shelf, setShelf] = useState<string>("all");
   return (
-    <div className="flex flex-wrap items-center gap-3">
-      <Segmented
-        label="Units"
-        value={unit}
-        onChange={setUnit}
-        options={[
-          { value: "oz", label: "oz" },
-          { value: "ml", label: "ml" },
-        ]}
-      />
-      <Segmented
-        label="Shelf"
-        value={family}
-        onChange={setFamily}
-        options={[
-          { value: "all", label: "All" },
-          { value: "bar", label: "Bar" },
-          { value: "cafe", label: "Café" },
-        ]}
-      />
-    </div>
+    <ToggleGroup
+      aria-label="Shelf"
+      variant="outline"
+      size="sm"
+      spacing={0}
+      value={[shelf]}
+      onValueChange={(next) => {
+        // Pressing the active item again would leave none selected.
+        if (next[0]) setShelf(next[0]);
+      }}
+    >
+      {SHELVES.map(([value, label]) => (
+        <ToggleGroupItem key={value} value={value}>
+          {label}
+        </ToggleGroupItem>
+      ))}
+    </ToggleGroup>
   );
 }
 

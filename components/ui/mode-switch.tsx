@@ -1,9 +1,15 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { Segmented } from "./segmented";
+import { ToggleGroup, ToggleGroupItem } from "./toggle-group";
 
 export type Mode = "system" | "cafe" | "bar";
+
+const MODES: Array<[Mode, string]> = [
+  ["system", "Auto"],
+  ["cafe", "Café"],
+  ["bar", "Bar"],
+];
 
 const KEY = "mugshot-mode";
 
@@ -37,16 +43,23 @@ function subscribe(listener: () => void) {
 export function ModeSwitch() {
   const mode = useSyncExternalStore(subscribe, read, () => "system" as Mode);
   return (
-    <Segmented
-      label="Color mode"
+    <ToggleGroup
+      aria-label="Color mode"
+      variant="outline"
       size="sm"
-      value={mode}
-      onChange={write}
-      options={[
-        { value: "system", label: "Auto" },
-        { value: "cafe", label: "Café" },
-        { value: "bar", label: "Bar" },
-      ]}
-    />
+      spacing={0}
+      value={[mode]}
+      onValueChange={(next) => {
+        // Pressing the active mode again would leave none selected.
+        const pressed = MODES.find(([value]) => next.includes(value));
+        if (pressed) write(pressed[0]);
+      }}
+    >
+      {MODES.map(([value, label]) => (
+        <ToggleGroupItem key={value} value={value}>
+          {label}
+        </ToggleGroupItem>
+      ))}
+    </ToggleGroup>
   );
 }
