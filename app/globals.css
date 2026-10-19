@@ -131,3 +131,18 @@
     @apply font-sans;
   }
 }
+
+/* Guided mode: the screen flash when a countdown finishes. */
+@theme {
+  --animate-flash: flash 0.5s ease-in-out 3;
+
+  @keyframes flash {
+    0%,
+    100% {
+      opacity: 0;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+}

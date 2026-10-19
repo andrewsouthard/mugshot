@@ -1,6 +1,7 @@
 "use client";
 
 import { MinusIcon, PlusIcon, TargetIcon, TimerIcon } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -166,8 +167,12 @@ export function RecipeView({ recipe }: { recipe: ResolvedRecipe }) {
         </ol>
       </section>
 
-      {/* Guided mode lands in build order step 4. */}
-      <Button size="lg" className="mt-8" disabled>
+      <Button
+        size="lg"
+        className="mt-8"
+        nativeButton={false}
+        render={<Link href={`/recipes/${recipe.id}/make?servings=${servings}`} />}
+      >
         Make it
       </Button>
     </>

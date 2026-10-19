@@ -1,13 +1,16 @@
 import type { MetadataRoute } from "next";
+import { DESCRIPTION } from "@/lib/site";
 
 // Required to prerender this metadata route in a static export.
 export const dynamic = "force-static";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
+    id: "/",
     name: "Mugshot",
     short_name: "Mugshot",
-    description: "Mugshot",
+    description: DESCRIPTION,
+    categories: ["food", "lifestyle"],
     start_url: "/",
     scope: "/",
     display: "standalone",

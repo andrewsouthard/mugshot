@@ -8,3 +8,6 @@ export const SITE_URL = new URL(
 );
 
 export const SITE_NAME = "Mugshot";
+
+export const DESCRIPTION =
+  "Cocktail and coffee recipes to make at home, with step-by-step timers. Works offline.";
