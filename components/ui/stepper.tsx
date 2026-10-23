@@ -21,7 +21,7 @@ export function Stepper({
   className?: string;
 }) {
   const btn =
-    "flex size-8 items-center justify-center rounded-full text-lg text-ink-muted transition-colors hover:bg-surface hover:text-ink disabled:opacity-30 disabled:hover:bg-transparent";
+    "flex size-10 items-center justify-center rounded-full text-lg text-ink-muted transition-colors hover:bg-surface hover:text-ink disabled:opacity-30 disabled:hover:bg-transparent";
   return (
     <div
       role="group"

@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import type { ResolvedIngredientLine } from "@/lib/content/schema";
-import type { VolumeUnit } from "@/lib/recipe/format";
+import {
+  partSizeMl,
+  VOLUME_DISPLAYS,
+  type VolumeDisplay,
+} from "@/lib/recipe/format";
 import { IngredientList } from "./ingredient-list";
 import { Stepper } from "./stepper";
 import { ToggleGroup, ToggleGroupItem } from "./toggle-group";
-
-const VOLUME_UNITS = ["oz", "ml"] as const;
 
 /** Ingredient spec with live unit conversion and batch scaling. */
 export function RecipeWorkbench({
@@ -15,15 +17,29 @@ export function RecipeWorkbench({
   serves = 1,
   defaultVolume = "oz",
   noun = ["drink", "drinks"],
+  servings,
+  onServingsChange,
+  volume: controlledVolume,
+  onVolumeChange,
 }: {
   ingredients: ResolvedIngredientLine[];
   serves?: number;
-  defaultVolume?: VolumeUnit;
+  defaultVolume?: VolumeDisplay;
   noun?: [string, string];
+  servings?: number;
+  onServingsChange?: (value: number) => void;
+  volume?: VolumeDisplay;
+  onVolumeChange?: (value: VolumeDisplay) => void;
 }) {
-  const [volume, setVolume] = useState<VolumeUnit>(defaultVolume);
-  const [count, setCount] = useState(serves);
-  const convertible = ingredients.some((i) => i.unit === "oz" || i.unit === "ml");
+  const [localVolume, setLocalVolume] = useState<VolumeDisplay>(defaultVolume);
+  const [localCount, setLocalCount] = useState(serves);
+  const volume = controlledVolume ?? localVolume;
+  const count = servings ?? localCount;
+  const setVolume = onVolumeChange ?? setLocalVolume;
+  const setCount = onServingsChange ?? setLocalCount;
+  const convertible = ingredients.some(
+    (i) => i.unit === "oz" || i.unit === "ml",
+  );
 
   return (
     <div>
@@ -43,11 +59,13 @@ export function RecipeWorkbench({
             value={[volume]}
             onValueChange={(next) => {
               // Pressing the active unit again would leave none selected.
-              const unit = VOLUME_UNITS.find((candidate) => next.includes(candidate));
+              const unit = VOLUME_DISPLAYS.find((candidate) =>
+                next.includes(candidate),
+              );
               if (unit) setVolume(unit);
             }}
           >
-            {VOLUME_UNITS.map((unit) => (
+            {VOLUME_DISPLAYS.map((unit) => (
               <ToggleGroupItem key={unit} value={unit}>
                 {unit}
               </ToggleGroupItem>
@@ -55,10 +73,20 @@ export function RecipeWorkbench({
           </ToggleGroup>
         )}
       </div>
+      {convertible && volume === "parts" && (
+        <p className="mt-4 text-sm text-ink-muted">
+          Use a full jigger as 1 part, and the same measure throughout. Amounts
+          scale with servings; your jigger size sets the drink size.
+        </p>
+      )}
       <IngredientList
         className="mt-4"
         ingredients={ingredients}
-        options={{ scale: count / serves, volume: convertible ? volume : undefined }}
+        options={{
+          scale: count / serves,
+          volume: convertible ? volume : undefined,
+          partMl: partSizeMl(ingredients),
+        }}
       />
     </div>
   );

@@ -4,6 +4,13 @@ Recipes for people who just want a good drink at home. The live reference is at
 [`/design-system`](../app/design-system/page.tsx). This file covers the rules
 behind it.
 
+The same components are used throughout the app: `SiteHeader` provides the
+linked logo and mode switch, search uses `RecipeCard`, and recipe pages use
+`RecipeWorkbench`, `StepList`, `RatioBar`, `SpecList` and `BrewSpecGrid`.
+Guided mode keeps its session-based timer behavior while sharing the ingredient
+rows, glassware, progress colors and personal recipe panel. Offline and missing
+pages use the same header, typography and surfaces.
+
 ## Principles
 
 1. **Numbers first.** Amounts lead every row in a fixed mono column. A spec
@@ -85,6 +92,12 @@ the number and unit separately).
 - Grams never convert, because coffee is always weighed.
 - Dashes round to whole numbers when scaled; barspoons and pieces to halves.
 - `to-taste` has no amount.
+- Cocktails also offer **parts** for a jigger or any consistent measure. The
+  first required spirit is one part (or the first required volume if there is
+  no spirit). Mixed oz/ml ingredients are compared before display rounding, so
+  proportions stay accurate. Parts scale with servings; dashes, barspoons,
+  garnishes and grams keep their units. The saved choice also applies in guided
+  mode, using the full recipe's basis for every step and pour target.
 
 ## Components
 
@@ -113,6 +126,11 @@ server-safe.
 | `ModeSwitch` _(client)_ | Auto / Café / Bar |
 
 ## Data
+
+`RecipeWorkbench` can manage its own state for demos, or accept `servings`,
+`onServingsChange`, `volume` and `onVolumeChange` to share the recipe page's
+scaling and saved unit preference. `BrewSpecGrid` accepts `scale` for dose and
+water amounts; temperature and ratio stay fixed.
 
 Components take the content types from `lib/content/schema.ts`
 (`ResolvedRecipe`, `ResolvedIngredientLine`, `Step`) and use `cn` from the

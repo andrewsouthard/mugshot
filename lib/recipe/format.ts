@@ -7,6 +7,8 @@ import type {
 } from "../content/schema";
 
 export type VolumeUnit = "oz" | "ml";
+export type VolumeDisplay = VolumeUnit | "parts";
+export const VOLUME_DISPLAYS = ["oz", "ml", "parts"] as const;
 export type TemperatureUnit = "C" | "F";
 
 export type DisplayOptions = {
@@ -16,13 +18,51 @@ export type DisplayOptions = {
    * Converts oz and ml amounts to this unit. Leave it out to show volumes as
    * written (coffee recipes, which are always in grams).
    */
-  volume?: VolumeUnit;
+  volume?: VolumeDisplay;
+  /** Unscaled volume of one part, derived from the full recipe's ingredients. */
+  partMl?: number;
 };
 
-type Quantity = { amount?: number; unit: Unit };
+// Parts are a display unit only; recipe content always stores real measures.
+type Quantity = { amount?: number; unit: Unit | "part" };
 
 /** Bar convention, not the exact 29.57, so specs round-trip cleanly. */
 export const ML_PER_OZ = 30;
+
+/** The base spirit is one part. Without a spirit, use the first required volume. */
+export function partSizeMl(
+  ingredients: ResolvedIngredientLine[],
+): number | undefined {
+  const volumes = ingredients.filter(
+    (line) =>
+      (line.unit === "oz" || line.unit === "ml") &&
+      line.amount !== undefined &&
+      line.amount > 0,
+  );
+  const base =
+    volumes.find((line) => line.category === "spirit" && !line.optional) ??
+    volumes.find((line) => !line.optional) ??
+    volumes[0];
+  return base && base.amount! * (base.unit === "oz" ? ML_PER_OZ : 1);
+}
+
+/** Common jigger fractions, including thirds and eighths, without volume rounding. */
+function formatParts(value: number): string {
+  const whole = Math.floor(value);
+  const remainder = value - whole;
+  if (remainder < 1e-8) return String(whole);
+  for (const denominator of [2, 3, 4, 5, 6, 8, 10, 12, 16]) {
+    const numerator = Math.round(remainder * denominator);
+    if (
+      numerator > 0 &&
+      numerator < denominator &&
+      Math.abs(remainder - numerator / denominator) < 1e-8
+    ) {
+      return `${whole ? `${whole} ` : ""}${numerator}/${denominator}`;
+    }
+  }
+  return String(Number(value.toPrecision(6)));
+}
 
 const FRACTIONS: Record<number, string> = { 0.25: "¼", 0.5: "½", 0.75: "¾" };
 
@@ -46,22 +86,39 @@ function formatDecimal(value: number): string {
 
 /**
  * Scales a quantity and converts its volume unit, rounding to amounts you can
- * actually measure. Quantities that are neither scaled nor converted are
- * returned as written.
+ * actually measure. Parts preserve the original proportions without volume
+ * rounding. Quantities that are neither scaled nor converted stay as written.
  */
-export function scaleQuantity<Q extends Quantity>(
-  quantity: Q,
-  { scale, volume }: DisplayOptions,
-): Q {
+export function scaleQuantity(
+  quantity: Quantity,
+  { scale, volume, partMl }: DisplayOptions,
+): Quantity {
   const { amount, unit } = quantity;
   if (amount === undefined) return quantity;
 
+  if (
+    volume === "parts" &&
+    (unit === "oz" || unit === "ml") &&
+    partMl &&
+    partMl > 0
+  ) {
+    return {
+      ...quantity,
+      amount: (amount * (unit === "oz" ? ML_PER_OZ : 1) * scale) / partMl,
+      unit: "part",
+    };
+  }
+
   const convertTo =
-    (unit === "oz" || unit === "ml") && volume && volume !== unit ? volume : undefined;
+    (unit === "oz" || unit === "ml") &&
+    (volume === "oz" || volume === "ml") &&
+    volume !== unit
+      ? volume
+      : undefined;
   if (scale === 1 && !convertTo) return quantity;
 
   let value = amount * scale;
-  let nextUnit: Unit = unit;
+  let nextUnit = unit;
   if (convertTo) {
     value = convertTo === "ml" ? value * ML_PER_OZ : value / ML_PER_OZ;
     nextUnit = convertTo;
@@ -86,25 +143,40 @@ export function scaleQuantity<Q extends Quantity>(
       break;
   }
 
-  return { ...quantity, amount: value, unit: nextUnit } as Q;
+  return { ...quantity, amount: value, unit: nextUnit };
 }
 
 /**
  * The number and unit label separately, for layouts that set them apart.
  * Both are "" for to-taste; the label is "" for pieces.
  */
-export function quantityParts({ amount, unit }: Quantity): { value: string; unit: string } {
-  if (amount === undefined || unit === "to-taste") return { value: "", unit: "" };
+export function quantityParts({ amount, unit }: Quantity): {
+  value: string;
+  unit: string;
+} {
+  if (amount === undefined || unit === "to-taste")
+    return { value: "", unit: "" };
   switch (unit) {
+    case "part":
+      return {
+        value: formatParts(amount),
+        unit: amount <= 1 ? "part" : "parts",
+      };
     case "oz":
       return { value: formatFraction(amount), unit: "oz" };
     case "ml":
     case "g":
       return { value: formatDecimal(amount), unit };
     case "dash":
-      return { value: formatDecimal(amount), unit: amount === 1 ? "dash" : "dashes" };
+      return {
+        value: formatDecimal(amount),
+        unit: amount === 1 ? "dash" : "dashes",
+      };
     case "barspoon":
-      return { value: formatFraction(amount), unit: amount <= 1 ? "barspoon" : "barspoons" };
+      return {
+        value: formatFraction(amount),
+        unit: amount <= 1 ? "barspoon" : "barspoons",
+      };
     case "piece":
       return { value: formatFraction(amount), unit: "" };
   }
@@ -164,10 +236,15 @@ export function formatDuration(seconds: number): string {
 
 export function describeTimer(timer: Timer): string {
   const duration = formatDuration(timer.seconds);
-  return timer.kind === "countdown" ? `${duration} timer` : `Stopwatch, aim for ${duration}`;
+  return timer.kind === "countdown"
+    ? `${duration} timer`
+    : `Stopwatch, aim for ${duration}`;
 }
 
-export function formatTemperature(celsius: number, unit: TemperatureUnit): string {
+export function formatTemperature(
+  celsius: number,
+  unit: TemperatureUnit,
+): string {
   const value = unit === "C" ? celsius : (celsius * 9) / 5 + 32;
   return `${Math.round(value)} °${unit}`;
 }
@@ -176,9 +253,13 @@ export function formatTemperature(celsius: number, unit: TemperatureUnit): strin
  * The brew ratio derived from the coffee and water weights, e.g. "1:15".
  * Null unless the recipe has exactly one of each, in grams.
  */
-export function brewRatio(recipe: Pick<ResolvedRecipe, "ingredients">): string | null {
+export function brewRatio(
+  recipe: Pick<ResolvedRecipe, "ingredients">,
+): string | null {
   const grams = (category: string) =>
-    recipe.ingredients.filter((line) => line.category === category && line.unit === "g");
+    recipe.ingredients.filter(
+      (line) => line.category === category && line.unit === "g",
+    );
   const coffee = grams("coffee");
   const water = grams("water");
   if (coffee.length !== 1 || water.length !== 1) return null;

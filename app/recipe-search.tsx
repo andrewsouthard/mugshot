@@ -1,12 +1,10 @@
 "use client";
 
 import { SearchIcon, XIcon } from "lucide-react";
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { RecipeCard } from "@/components/ui/recipe-card";
 import { Input } from "@/components/ui/input";
 import { Toggle } from "@/components/ui/toggle";
 import type { ResolvedRecipe } from "@/lib/content/schema";
@@ -33,7 +31,11 @@ export function RecipeSearch({ recipes }: { recipes: ResolvedRecipe[] }) {
   const onChange = (next: SearchState) => {
     setState(next);
     const query = toSearchParams(next).toString();
-    window.history.replaceState(null, "", query ? `?${query}` : window.location.pathname);
+    window.history.replaceState(
+      null,
+      "",
+      query ? `?${query}` : window.location.pathname,
+    );
   };
 
   return <SearchView recipes={recipes} state={state} onChange={onChange} />;
@@ -52,33 +54,41 @@ export function SearchView({
 }) {
   const search = useMemo(() => createRecipeSearch(recipes), [recipes]);
   const options = useMemo(() => facetOptions(recipes), [recipes]);
-  const byId = useMemo(() => new Map(recipes.map((recipe) => [recipe.id, recipe])), [recipes]);
+  const byId = useMemo(
+    () => new Map(recipes.map((recipe) => [recipe.id, recipe])),
+    [recipes],
+  );
 
   const results = search(state.query)
     .map((id) => byId.get(id)!)
     .filter((recipe) => matchesFilters(recipe, state.filters));
   const filtered =
-    state.query.trim() !== "" || FACETS.some((facet) => state.filters[facet].length > 0);
+    state.query.trim() !== "" ||
+    FACETS.some((facet) => state.filters[facet].length > 0);
 
   const toggle = (facet: Facet, value: string, pressed: boolean) => {
-    const selected = state.filters[facet].filter((candidate) => candidate !== value);
+    const selected = state.filters[facet].filter(
+      (candidate) => candidate !== value,
+    );
     if (pressed) selected.push(value);
     onChange?.({ ...state, filters: { ...state.filters, [facet]: selected } });
   };
 
   return (
     <>
-      <search className="mt-8 space-y-4">
+      <search className="mt-8 space-y-5 rounded-card border border-line bg-surface p-4 sm:mt-10 sm:p-6">
         <div className="relative">
           <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             type="search"
             aria-label="Search recipes"
             placeholder="Search by name, ingredient or tag"
-            className="h-10 pl-9"
+            className="h-12 bg-paper pl-9"
             value={state.query}
             disabled={!onChange}
-            onChange={(event) => onChange?.({ ...state, query: event.target.value })}
+            onChange={(event) =>
+              onChange?.({ ...state, query: event.target.value })
+            }
           />
         </div>
 
@@ -90,7 +100,7 @@ export function SearchView({
               aria-label={FACET_LABELS[facet]}
               className="flex flex-wrap items-center gap-1.5"
             >
-              <span className="w-16 shrink-0 text-xs text-muted-foreground">
+              <span className="eyebrow w-16 shrink-0">
                 {FACET_LABELS[facet]}
               </span>
               {options[facet].map((value) => (
@@ -111,65 +121,40 @@ export function SearchView({
         </div>
       </search>
 
-      <div className="mt-6 flex items-center justify-between gap-4">
-        <p aria-live="polite" className="text-sm text-muted-foreground">
+      <div className="mt-8 flex items-center justify-between gap-4 border-b border-line pb-4">
+        <p aria-live="polite" className="measure text-sm text-ink-muted">
           {results.length} {results.length === 1 ? "recipe" : "recipes"}
         </p>
         {filtered && (
-          <Button variant="ghost" size="sm" onClick={() => onChange?.(NO_SEARCH)}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onChange?.(NO_SEARCH)}
+          >
             <XIcon data-icon="inline-start" />
             Clear
           </Button>
         )}
       </div>
 
+      <h2 className="sr-only">Recipes</h2>
       {results.length > 0 ? (
-        <ul className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {results.map((recipe) => (
             <li key={recipe.id}>
-              <RecipeCard recipe={recipe} />
+              <RecipeCard
+                recipe={recipe}
+                href={`/recipes/${recipe.id}`}
+                className="h-full"
+              />
             </li>
           ))}
         </ul>
       ) : (
-        <p className="mt-12 text-center text-muted-foreground">
+        <p className="mt-5 rounded-card border border-dashed border-line bg-surface px-6 py-16 text-center text-ink-muted">
           No recipes match. Try fewer words or filters.
         </p>
       )}
     </>
-  );
-}
-
-function RecipeCard({ recipe }: { recipe: ResolvedRecipe }) {
-  const details = [recipe.type, recipe.method, recipe.glass].filter(Boolean);
-  return (
-    <Card className="relative h-full transition-colors hover:bg-muted/50">
-      {recipe.illustration && (
-        // SVGs are served as-is; next/image's default loader doesn't work in
-        // a static export.
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={`/illustrations/${recipe.illustration}`}
-          alt=""
-          className="mx-auto aspect-square w-32"
-        />
-      )}
-      <CardHeader>
-        <CardTitle>
-          <Link href={`/recipes/${recipe.id}`} className="after:absolute after:inset-0">
-            {recipe.name}
-          </Link>
-        </CardTitle>
-        <p className="text-xs text-muted-foreground capitalize">{details.join(" · ")}</p>
-        <CardDescription>{recipe.description}</CardDescription>
-        <ul aria-label="Tags" className="mt-2 flex flex-wrap gap-1.5">
-          {recipe.tags.map((tag) => (
-            <li key={tag}>
-              <Badge variant="secondary">{tag}</Badge>
-            </li>
-          ))}
-        </ul>
-      </CardHeader>
-    </Card>
   );
 }

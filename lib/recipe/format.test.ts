@@ -8,6 +8,7 @@ import {
   formatTarget,
   formatTemperature,
   quantityParts,
+  partSizeMl,
   renderStepText,
   scaleQuantity,
   stepIngredientIds,
@@ -23,11 +24,92 @@ function line(
   unit: ResolvedIngredientLine["unit"],
   category = "spirit",
 ): ResolvedIngredientLine {
-  return { ingredient, amount, unit, name: ingredient.replace(/-/g, " "), category };
+  return {
+    ingredient,
+    amount,
+    unit,
+    name: ingredient.replace(/-/g, " "),
+    category,
+  };
 }
 
-const quantity = (options: Parameters<typeof scaleQuantity>[1], amount: number, unit: ResolvedIngredientLine["unit"]) =>
-  formatQuantity(scaleQuantity({ amount, unit }, options));
+const quantity = (
+  options: Parameters<typeof scaleQuantity>[1],
+  amount: number,
+  unit: ResolvedIngredientLine["unit"],
+) => formatQuantity(scaleQuantity({ amount, unit }, options));
+
+describe("parts for a jigger", () => {
+  const ingredients = [
+    line("simple", 15, "ml", "sweetener"),
+    line("rum", 1, "oz"),
+    line("soda", 60, "ml", "soda"),
+    line("bitters", 2, "dash", "bitters"),
+    line("lime", 1, "piece", "garnish"),
+  ];
+  const options = {
+    scale: 1,
+    volume: "parts",
+    partMl: partSizeMl(ingredients),
+  } as const;
+
+  it("uses the base spirit as one part, even when syrup comes first", () => {
+    expect(options.partMl).toBe(30);
+    expect(
+      ingredients.map((ingredient) => formatIngredient(ingredient, options)),
+    ).toEqual([
+      "1/2 part simple",
+      "1 part rum",
+      "2 parts soda",
+      "2 dashes bitters",
+      "1 lime",
+    ]);
+  });
+
+  it("scales parts and garnishes together for a batch", () => {
+    const batch = { ...options, scale: 3 };
+    expect(formatIngredient(ingredients[0], batch)).toBe("1 1/2 parts simple");
+    expect(formatIngredient(ingredients[1], batch)).toBe("3 parts rum");
+    expect(formatIngredient(ingredients[3], batch)).toBe("6 dashes bitters");
+    expect(formatIngredient(ingredients[4], batch)).toBe("3 lime");
+  });
+
+  it("preserves thirds, eighths and small amounts without oz/ml rounding", () => {
+    expect(quantity(options, 10, "ml")).toBe("1/3 part");
+    expect(quantity(options, 0.375, "oz")).toBe("3/8 part");
+    expect(quantity(options, 0.1, "ml")).toBe("0.00333333 part");
+    expect(quantity(options, 22, "ml")).toBe("0.733333 part");
+  });
+
+  it("uses one recipe-wide basis for step placeholders and pour targets", () => {
+    expect(
+      renderStepText("Add {simple}, {rum} and {soda}.", ingredients, options),
+    ).toBe("Add 1/2 part simple, 1 part rum and 2 parts soda.");
+    expect(
+      formatTarget(
+        { ingredient: "soda", amount: 60, unit: "ml" },
+        ingredients,
+        options,
+      ),
+    ).toBe("2 parts soda");
+  });
+
+  it("doesn't convert weights, seasoning or to-taste ingredients", () => {
+    expect(quantity(options, 30, "g")).toBe("30 g");
+    expect(quantity(options, 0.5, "barspoon")).toBe("½ barspoon");
+    expect(
+      formatIngredient(line("sugar", undefined, "to-taste"), options),
+    ).toBe("sugar, to taste");
+  });
+
+  it("falls back to a required volume for spirit-free recipes, ignoring optional spirits", () => {
+    const optionalSpirit = { ...line("rum", 2, "oz"), optional: true };
+    expect(partSizeMl([optionalSpirit, line("juice", 45, "ml", "juice")])).toBe(
+      45,
+    );
+    expect(partSizeMl([line("coffee", 30, "g", "coffee")])).toBeUndefined();
+  });
+});
 
 describe("scaling and units", () => {
   it("shows oz as quarter fractions", () => {
@@ -80,20 +162,45 @@ describe("scaling and units", () => {
 
 describe("quantityParts", () => {
   it("splits the number from the unit label", () => {
-    expect(quantityParts({ amount: 1.5, unit: "oz" })).toEqual({ value: "1½", unit: "oz" });
-    expect(quantityParts({ amount: 2, unit: "dash" })).toEqual({ value: "2", unit: "dashes" });
-    expect(quantityParts({ amount: 1, unit: "piece" })).toEqual({ value: "1", unit: "" });
-    expect(quantityParts({ unit: "to-taste" })).toEqual({ value: "", unit: "" });
+    expect(quantityParts({ amount: 1.5, unit: "oz" })).toEqual({
+      value: "1½",
+      unit: "oz",
+    });
+    expect(quantityParts({ amount: 2, unit: "dash" })).toEqual({
+      value: "2",
+      unit: "dashes",
+    });
+    expect(quantityParts({ amount: 1, unit: "piece" })).toEqual({
+      value: "1",
+      unit: "",
+    });
+    expect(quantityParts({ unit: "to-taste" })).toEqual({
+      value: "",
+      unit: "",
+    });
   });
 });
 
 describe("formatIngredient", () => {
   it("renders each kind of unit", () => {
-    expect(formatIngredient(line("cognac", 1.5, "oz"), inOz)).toBe("1½ oz cognac");
-    expect(formatIngredient(line("water", 450, "g"), asWritten)).toBe("450 g water");
-    expect(formatIngredient(line("angostura-bitters", 2, "dash"), asWritten)).toBe("2 dashes angostura bitters");
-    expect(formatIngredient(line("orange-peel", 1, "piece"), asWritten)).toBe("1 orange peel");
-    expect(formatIngredient(line("superfine-sugar", undefined, "to-taste"), asWritten)).toBe("superfine sugar, to taste");
+    expect(formatIngredient(line("cognac", 1.5, "oz"), inOz)).toBe(
+      "1½ oz cognac",
+    );
+    expect(formatIngredient(line("water", 450, "g"), asWritten)).toBe(
+      "450 g water",
+    );
+    expect(
+      formatIngredient(line("angostura-bitters", 2, "dash"), asWritten),
+    ).toBe("2 dashes angostura bitters");
+    expect(formatIngredient(line("orange-peel", 1, "piece"), asWritten)).toBe(
+      "1 orange peel",
+    );
+    expect(
+      formatIngredient(
+        line("superfine-sugar", undefined, "to-taste"),
+        asWritten,
+      ),
+    ).toBe("superfine sugar, to taste");
   });
 });
 
@@ -106,25 +213,39 @@ describe("step text", () => {
 
   it("replaces placeholders with scaled, converted amounts", () => {
     expect(
-      renderStepText("Add {cognac} and {lemon-juice}.", ingredients, { scale: 2, volume: "ml" }),
+      renderStepText("Add {cognac} and {lemon-juice}.", ingredients, {
+        scale: 2,
+        volume: "ml",
+      }),
     ).toBe("Add 90 ml cognac and 45 ml lemon juice.");
   });
 
   it("lists the ingredients a step refers to", () => {
-    expect(stepIngredientIds("{cognac}, {water} and {cognac}")).toEqual(["cognac", "water"]);
+    expect(stepIngredientIds("{cognac}, {water} and {cognac}")).toEqual([
+      "cognac",
+      "water",
+    ]);
   });
 
   it("scales targets", () => {
     expect(
-      formatTarget({ ingredient: "water", amount: 450, unit: "g" }, ingredients, { scale: 2 }),
+      formatTarget(
+        { ingredient: "water", amount: 450, unit: "g" },
+        ingredients,
+        { scale: 2 },
+      ),
     ).toBe("900 g water");
   });
 });
 
 describe("timers", () => {
   it("describes countdowns and stopwatches", () => {
-    expect(describeTimer({ kind: "countdown", seconds: 12, autoStart: false })).toBe("0:12 timer");
-    expect(describeTimer({ kind: "stopwatch", seconds: 210, autoStart: false })).toBe("Stopwatch, aim for 3:30");
+    expect(
+      describeTimer({ kind: "countdown", seconds: 12, autoStart: false }),
+    ).toBe("0:12 timer");
+    expect(
+      describeTimer({ kind: "stopwatch", seconds: 210, autoStart: false }),
+    ).toBe("Stopwatch, aim for 3:30");
   });
 });
 
@@ -136,10 +257,20 @@ describe("coffee", () => {
 
   it("derives the brew ratio from coffee and water weights", () => {
     expect(
-      brewRatio({ ingredients: [line("coffee-beans", 30, "g", "coffee"), line("water", 450, "g", "water")] }),
+      brewRatio({
+        ingredients: [
+          line("coffee-beans", 30, "g", "coffee"),
+          line("water", 450, "g", "water"),
+        ],
+      }),
     ).toBe("1:15");
     expect(
-      brewRatio({ ingredients: [line("coffee-beans", 18, "g", "coffee"), line("water", 300, "g", "water")] }),
+      brewRatio({
+        ingredients: [
+          line("coffee-beans", 18, "g", "coffee"),
+          line("water", 300, "g", "water"),
+        ],
+      }),
     ).toBe("1:16.7");
     expect(brewRatio({ ingredients: [line("cognac", 1.5, "oz")] })).toBeNull();
   });

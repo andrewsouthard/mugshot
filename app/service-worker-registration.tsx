@@ -64,9 +64,9 @@ export function ServiceWorkerRegistration() {
   return (
     <div
       role="status"
-      className="fixed inset-x-4 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-50 mx-auto flex max-w-md items-center gap-3 rounded-xl border bg-popover p-3 pl-4 text-sm text-popover-foreground shadow-lg"
+      className="fixed inset-x-4 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-50 mx-auto flex max-w-md flex-wrap items-center gap-3 rounded-card border border-line-strong bg-surface-raised p-4 text-sm text-ink"
     >
-      <p className="flex-1">An update is available.</p>
+      <p className="min-w-28 flex-1">An update is available.</p>
       <Button variant="ghost" size="sm" onClick={() => setDismissed(true)}>
         Later
       </Button>

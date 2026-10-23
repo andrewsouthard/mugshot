@@ -3,7 +3,6 @@
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
-  HeartIcon,
   PauseIcon,
   PlayIcon,
   RotateCcwIcon,
@@ -12,12 +11,24 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
-import { Textarea } from "@/components/ui/textarea";
+import { RecipePersonal } from "@/components/recipe-personal";
+import { RecipeGlass } from "@/components/ui/glass";
+import { MugMark } from "@/components/ui/logo";
+import { ModeSwitch } from "@/components/ui/mode-switch";
+import { IngredientList } from "@/components/ui/ingredient-list";
+import { BrewSpecGrid } from "@/components/ui/stat";
+import { Swatch } from "@/components/ui/swatch";
 import type { ResolvedRecipe, Timer } from "@/lib/content/schema";
 import { soundAlarm, unlockAudio } from "@/lib/guided/alarm";
 import {
@@ -34,18 +45,20 @@ import {
 } from "@/lib/guided/session";
 import { useWakeLock } from "@/lib/guided/wake-lock";
 import { deleteItem, getItem, setItem } from "@/lib/local-db";
-import { useFavorite, useNote } from "@/lib/local-data";
 import { usePreference } from "@/lib/preferences";
 import {
   formatDuration,
   formatIngredient,
   formatTarget,
-  formatTemperature,
+  quantityParts,
+  scaleQuantity,
+  partSizeMl,
+  VOLUME_DISPLAYS,
   renderStepText,
   stepIngredientIds,
   type DisplayOptions,
   type TemperatureUnit,
-  type VolumeUnit,
+  type VolumeDisplay,
 } from "@/lib/recipe/format";
 import { cn } from "@/lib/utils";
 
@@ -57,8 +70,16 @@ export function GuidedMode({ recipe }: { recipe: ResolvedRecipe }) {
   const [session, setSession] = useState<Session | null>(null);
   const [now, setNow] = useState(0);
   const [flashes, setFlashes] = useState(0);
-  const [volume] = usePreference<VolumeUnit>("volume-unit", ["oz", "ml"], "oz");
-  const [temperature] = usePreference<TemperatureUnit>("temperature-unit", ["C", "F"], "C");
+  const [volume] = usePreference<VolumeDisplay>(
+    "volume-unit",
+    VOLUME_DISPLAYS,
+    "oz",
+  );
+  const [temperature] = usePreference<TemperatureUnit>(
+    "temperature-unit",
+    ["C", "F"],
+    "C",
+  );
 
   useWakeLock(true);
 
@@ -71,7 +92,10 @@ export function GuidedMode({ recipe }: { recipe: ResolvedRecipe }) {
       const time = Date.now();
       const servings = Number(searchParams.get("servings") ?? recipe.serves);
       setNow(time);
-      setSession(resumableSession(saved, recipe, time) ?? newSession(recipe, servings, time));
+      setSession(
+        resumableSession(saved, recipe, time) ??
+          newSession(recipe, servings, time),
+      );
     });
     return () => {
       current = false;
@@ -86,7 +110,9 @@ export function GuidedMode({ recipe }: { recipe: ResolvedRecipe }) {
   }, [recipe.id, session]);
 
   const update = useCallback((change: (session: Session) => Session) => {
-    setSession((previous) => previous && { ...change(previous), updatedAt: Date.now() });
+    setSession(
+      (previous) => previous && { ...change(previous), updatedAt: Date.now() },
+    );
   }, []);
 
   // While a timer runs, re-render a few times a second and sound the alarm
@@ -100,7 +126,11 @@ export function GuidedMode({ recipe }: { recipe: ResolvedRecipe }) {
     session !== null &&
     recipe.steps.some(({ timer }, index) => {
       const state = session.timers[index];
-      return timer && isRunning(state) && (timer.kind === "stopwatch" || !state.alerted);
+      return (
+        timer &&
+        isRunning(state) &&
+        (timer.kind === "stopwatch" || !state.alerted)
+      );
     });
   useEffect(() => {
     if (!ticking) return;
@@ -115,7 +145,8 @@ export function GuidedMode({ recipe }: { recipe: ResolvedRecipe }) {
       setFlashes((count) => count + 1);
       update((s) => {
         const timers = { ...s.timers };
-        for (const index of due) timers[index] = { ...timers[index], alerted: true };
+        for (const index of due)
+          timers[index] = { ...timers[index], alerted: true };
         return { ...s, timers };
       });
     };
@@ -157,7 +188,11 @@ export function GuidedMode({ recipe }: { recipe: ResolvedRecipe }) {
   useEffect(() => {
     if (session?.phase !== "steps") return;
     const onKey = (event: KeyboardEvent) => {
-      if (event.target instanceof HTMLElement && event.target.closest("input, textarea")) return;
+      if (
+        event.target instanceof HTMLElement &&
+        event.target.closest("input, textarea")
+      )
+        return;
       if (event.key === "ArrowRight") next();
       if (event.key === "ArrowLeft") back();
     };
@@ -165,24 +200,25 @@ export function GuidedMode({ recipe }: { recipe: ResolvedRecipe }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [session?.phase, next, back]);
 
-  if (!session) return <div className="fixed inset-0 z-40 bg-background" />;
+  if (!session) return <div className="fixed inset-0 z-40 bg-paper" />;
 
   const options: DisplayOptions = {
     scale: session.servings / recipe.serves,
     volume: recipe.type === "cocktail" ? volume : undefined,
+    partMl: partSizeMl(recipe.ingredients),
   };
 
   return (
     // Any tap unlocks audio, so the countdown alarm can beep later.
     <div
-      className="fixed inset-0 z-40 flex flex-col bg-background pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
+      className="fixed inset-0 z-40 flex flex-col bg-paper pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
       onPointerDown={unlockAudio}
     >
       {flashes > 0 && (
         <div
           key={flashes}
           aria-hidden
-          className="pointer-events-none fixed inset-0 z-50 bg-primary opacity-0 motion-safe:animate-flash"
+          className="pointer-events-none fixed inset-0 z-50 bg-brand opacity-0 motion-safe:animate-flash"
         />
       )}
 
@@ -195,7 +231,9 @@ export function GuidedMode({ recipe }: { recipe: ResolvedRecipe }) {
           onToggle={(item, checked) =>
             update((s) => ({
               ...s,
-              checked: checked ? [...s.checked, item] : s.checked.filter((c) => c !== item),
+              checked: checked
+                ? [...s.checked, item]
+                : s.checked.filter((c) => c !== item),
             }))
           }
           onStart={() => goTo(0)}
@@ -226,33 +264,55 @@ export function GuidedMode({ recipe }: { recipe: ResolvedRecipe }) {
         <Done
           recipe={recipe}
           options={options}
-          onAgain={() => setSession(newSession(recipe, session.servings, Date.now()))}
+          onAgain={() =>
+            setSession(newSession(recipe, session.servings, Date.now()))
+          }
         />
       )}
     </div>
   );
 }
 
-function Header({ recipe, children }: { recipe: ResolvedRecipe; children?: ReactNode }) {
+function Header({
+  recipe,
+  children,
+}: {
+  recipe: ResolvedRecipe;
+  children?: ReactNode;
+}) {
   return (
-    <header className="flex items-center gap-3 px-4 py-3">
-      <Button
-        variant="ghost"
-        size="icon"
-        aria-label="Exit"
-        nativeButton={false}
-        render={<Link href={`/recipes/${recipe.id}`} />}
-      >
-        <XIcon />
-      </Button>
-      <p className="truncate text-sm font-medium">{recipe.name}</p>
-      <div className="ml-auto flex items-center gap-3">{children}</div>
+    <header className="border-b border-line bg-surface px-4 py-3 sm:px-6">
+      <div className="mx-auto flex w-full max-w-4xl flex-wrap items-center gap-x-3 gap-y-2">
+        <MugMark className="size-7 shrink-0" />
+        <p className="min-w-0 flex-1 truncate text-sm font-bold">
+          {recipe.name}
+        </p>
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="Exit"
+          nativeButton={false}
+          render={<Link href={`/recipes/${recipe.id}`} />}
+        >
+          <XIcon />
+        </Button>
+        <div className="flex w-full items-center justify-between gap-3">
+          <div className="measure text-xs text-ink-muted">
+            {children ?? "Make it your own"}
+          </div>
+          <ModeSwitch />
+        </div>
+      </div>
     </header>
   );
 }
 
 function Footer({ children }: { children: ReactNode }) {
-  return <footer className="flex gap-3 border-t px-4 py-3">{children}</footer>;
+  return (
+    <footer className="border-t border-line bg-surface px-4 py-3 sm:px-6">
+      <div className="mx-auto flex w-full max-w-xl gap-3">{children}</div>
+    </footer>
+  );
 }
 
 const BIG_BUTTON = "h-12 flex-1 text-base";
@@ -273,54 +333,95 @@ function Prep({
   onStart: () => void;
 }) {
   const item = (key: string, label: ReactNode) => (
-    <li key={key}>
-      <label className="flex min-h-11 items-center gap-3">
+    <li key={key} className="border-b border-line last:border-0">
+      <label className="flex min-h-12 cursor-pointer items-center gap-3 py-3">
         <Checkbox
           checked={session.checked.includes(key)}
           onCheckedChange={(checked) => onToggle(key, checked)}
         />
-        <span className="flex flex-wrap items-baseline gap-x-2">{label}</span>
+        <span className="min-w-0 flex-1">{label}</span>
       </label>
     </li>
   );
 
   return (
     <>
-      <Header recipe={recipe} />
-      <main className="flex-1 overflow-y-auto px-6 pb-6">
+      <Header recipe={recipe}>Preparation</Header>
+      <main className="flex-1 overflow-y-auto px-4 py-6 sm:px-6">
         <div className="mx-auto max-w-xl">
-          <h1 className="text-3xl font-semibold tracking-tight">Get ready</h1>
-          <p className="mt-1 text-muted-foreground">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="eyebrow mb-2">Before you start</p>
+              <h1 className="text-4xl font-bold tracking-tight">Get ready</h1>
+            </div>
+            <RecipeGlass recipe={recipe} size={72} />
+          </div>
+          <p className="measure mt-2 text-sm text-ink-muted">
             {session.servings} {session.servings === 1 ? "serving" : "servings"}
           </p>
-
-          <h2 className="mt-8 font-semibold">Ingredients</h2>
-          <ul className="mt-2">
-            {recipe.ingredients.map((line) =>
-              item(
-                `ingredient:${line.ingredient}`,
-                <>
-                  <span className="text-lg">{formatIngredient(line, options)}</span>
-                  {line.note && <span className="text-sm text-muted-foreground">{line.note}</span>}
-                  {line.optional && <Badge variant="outline">optional</Badge>}
-                </>,
-              ),
-            )}
-          </ul>
-
-          {recipe.brew && (
-            <p className="mt-4 text-muted-foreground">
-              Grind {recipe.brew.grind}, water at{" "}
-              {formatTemperature(recipe.brew.waterTempC, temperature)}.
+          {options.volume === "parts" && options.partMl && (
+            <p className="mt-3 text-sm text-ink-muted">
+              Use a full jigger as 1 part and the same measure throughout. Your
+              jigger size sets the drink size.
             </p>
           )}
 
-          <h2 className="mt-8 font-semibold">Equipment</h2>
+          <h2 className="eyebrow mt-8">Ingredients</h2>
+          <ul className="mt-2">
+            {recipe.ingredients.map((line) => {
+              const amount = quantityParts(scaleQuantity(line, options));
+              return item(
+                `ingredient:${line.ingredient}`,
+                <>
+                  <span className="grid grid-cols-[4.5rem_1fr] items-baseline gap-3">
+                    <span className="measure text-right font-semibold">
+                      {amount.value}
+                      <span className="ml-1 text-xs font-normal text-ink-muted">
+                        {amount.unit}
+                      </span>
+                    </span>
+                    <span className="flex flex-wrap items-center gap-2">
+                      <Swatch category={line.category} />
+                      <span className="font-medium">{line.name}</span>
+                      {line.optional && (
+                        <Badge variant="outline">optional</Badge>
+                      )}
+                    </span>
+                  </span>
+                  {(line.note || line.unit === "to-taste") && (
+                    <span className="mt-1 block pl-[5.25rem] text-sm text-ink-muted">
+                      {[line.unit === "to-taste" ? "to taste" : null, line.note]
+                        .filter(Boolean)
+                        .join(", ")}
+                    </span>
+                  )}
+                </>,
+              );
+            })}
+          </ul>
+
+          {recipe.brew && (
+            <BrewSpecGrid
+              recipe={recipe}
+              temperature={temperature}
+              scale={options.scale}
+              className="mt-6"
+            />
+          )}
+
+          <h2 className="eyebrow mt-8">Equipment</h2>
           <ul className="mt-2">
             {recipe.equipment.map((thing) =>
-              item(`equipment:${thing}`, <span className="text-lg">{thing}</span>),
+              item(
+                `equipment:${thing}`,
+                <span className="text-lg">{thing}</span>,
+              ),
             )}
-            {recipe.glass && item(`glass:${recipe.glass}`, <span className="text-lg">{recipe.glass}</span>)}
+            {recipe.glass &&
+              item(
+                `glass:${recipe.glass}`,
+                <span className="text-lg">{recipe.glass}</span>,
+              )}
           </ul>
         </div>
       </main>
@@ -348,7 +449,12 @@ function StepScreen({
   options: DisplayOptions;
   onNext: () => void;
   onBack: () => void;
-  onTimer: (change: (state: TimerState | undefined, now: number) => TimerState | undefined) => void;
+  onTimer: (
+    change: (
+      state: TimerState | undefined,
+      now: number,
+    ) => TimerState | undefined,
+  ) => void;
 }) {
   const step = recipe.steps[session.step];
   const total = recipe.steps.length;
@@ -362,20 +468,21 @@ function StepScreen({
   return (
     <>
       <Header recipe={recipe}>
-        <span className="text-sm text-muted-foreground tabular-nums">
+        <span className="measure text-xs text-ink-muted">
           Step {session.step + 1} of {total}
         </span>
       </Header>
       <Progress
         value={((session.step + 1) / total) * 100}
         aria-label={`Step ${session.step + 1} of ${total}`}
-        className="px-4"
+        className="shrink-0 rounded-none"
       />
 
       <main
         className="flex flex-1 touch-pan-y flex-col overflow-y-auto px-6 py-8"
         onPointerDown={(event) => {
-          if (event.pointerType === "touch") swipeStart.current = { x: event.clientX, y: event.clientY };
+          if (event.pointerType === "touch")
+            swipeStart.current = { x: event.clientX, y: event.clientY };
         }}
         onPointerUp={(event) => {
           const start = swipeStart.current;
@@ -383,27 +490,34 @@ function StepScreen({
           if (!start) return;
           const dx = event.clientX - start.x;
           const dy = event.clientY - start.y;
-          if (Math.abs(dx) < SWIPE_PX || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+          if (Math.abs(dx) < SWIPE_PX || Math.abs(dx) < Math.abs(dy) * 1.5)
+            return;
           if (dx < 0) onNext();
           else onBack();
         }}
       >
-        <div key={session.step} className="mx-auto flex w-full max-w-xl flex-1 flex-col gap-8">
-          <p aria-live="polite" className="text-3xl leading-snug font-medium text-balance">
+        <div
+          key={session.step}
+          className="mx-auto flex w-full max-w-xl flex-1 flex-col gap-8"
+        >
+          <p
+            aria-live="polite"
+            className="text-3xl leading-snug font-bold tracking-tight text-balance sm:text-4xl"
+          >
             {renderStepText(step.text, recipe.ingredients, options)}
           </p>
 
           {referenced.length > 0 && (
-            <ul className="space-y-1 text-lg text-muted-foreground">
-              {referenced.map((line) => (
-                <li key={line.ingredient}>{formatIngredient(line, options)}</li>
-              ))}
-            </ul>
+            <IngredientList
+              ingredients={referenced}
+              options={options}
+              className="rounded-card border border-line bg-surface px-4"
+            />
           )}
 
           {step.target && (
-            <p className="flex items-center gap-3 text-2xl font-semibold">
-              <TargetIcon className="size-6 text-muted-foreground" />
+            <p className="measure flex items-center gap-3 rounded-control bg-brand-wash p-4 text-xl font-semibold">
+              <TargetIcon className="size-6 text-ink-muted" />
               {formatTarget(step.target, recipe.ingredients, options)}
             </p>
           )}
@@ -420,7 +534,12 @@ function StepScreen({
       </main>
 
       <Footer>
-        <Button variant="outline" size="lg" className={BIG_BUTTON} onClick={onBack}>
+        <Button
+          variant="outline"
+          size="lg"
+          className={BIG_BUTTON}
+          onClick={onBack}
+        >
           <ChevronLeftIcon data-icon="inline-start" />
           Back
         </Button>
@@ -442,7 +561,12 @@ function TimerControl({
   timer: Timer;
   state: TimerState | undefined;
   now: number;
-  onChange: (change: (state: TimerState | undefined, now: number) => TimerState | undefined) => void;
+  onChange: (
+    change: (
+      state: TimerState | undefined,
+      now: number,
+    ) => TimerState | undefined,
+  ) => void;
 }) {
   const running = isRunning(state);
   const finished = isFinished(timer, state, now);
@@ -450,19 +574,38 @@ function TimerControl({
   const overTarget = timer.kind === "stopwatch" && seconds >= timer.seconds;
 
   return (
-    <section aria-label="Timer" className="mt-auto flex flex-col items-center gap-4 rounded-xl border p-6">
+    <section
+      aria-label="Timer"
+      className="mt-auto flex flex-col items-center gap-4 rounded-card border border-line bg-surface p-5 sm:p-6"
+    >
       {timer.kind === "stopwatch" && (
-        <p className="text-sm text-muted-foreground">Aim for {formatDuration(timer.seconds)}</p>
+        <p className="text-sm text-ink-muted">
+          Aim for {formatDuration(timer.seconds)}
+        </p>
       )}
       <p
         role="timer"
         className={cn(
-          "text-7xl font-semibold tabular-nums",
-          (finished || overTarget) && "text-primary underline decoration-4 underline-offset-8",
+          "measure text-6xl font-medium sm:text-7xl",
+          (finished || overTarget) &&
+            "text-success underline decoration-4 underline-offset-8",
         )}
       >
         {formatDuration(seconds)}
       </p>
+      <p className="eyebrow">
+        {timer.kind === "countdown" ? "Time remaining" : "Time elapsed"}
+      </p>
+      <Progress
+        value={Math.min(
+          100,
+          (timer.kind === "countdown"
+            ? 1 - seconds / timer.seconds
+            : seconds / timer.seconds) * 100,
+        )}
+        aria-label="Timer progress"
+        className="w-full max-w-xs"
+      />
       {finished && (
         <p role="alert" className="text-lg font-medium">
           Time&apos;s up
@@ -475,11 +618,17 @@ function TimerControl({
             className={BIG_BUTTON}
             onClick={() =>
               onChange((current, time) =>
-                current && isRunning(current) ? pauseTimer(current, time) : startTimer(current, time),
+                current && isRunning(current)
+                  ? pauseTimer(current, time)
+                  : startTimer(current, time),
               )
             }
           >
-            {running ? <PauseIcon data-icon="inline-start" /> : <PlayIcon data-icon="inline-start" />}
+            {running ? (
+              <PauseIcon data-icon="inline-start" />
+            ) : (
+              <PlayIcon data-icon="inline-start" />
+            )}
             {running ? "Pause" : state ? "Resume" : "Start"}
           </Button>
         )}
@@ -507,44 +656,37 @@ function Done({
   options: DisplayOptions;
   onAgain: () => void;
 }) {
-  const [favorite, setFavorite] = useFavorite(recipe.id);
-  const [note, setNote] = useNote(recipe.id);
-  const garnishes = recipe.ingredients.filter((line) => line.category === "garnish");
+  const garnishes = recipe.ingredients.filter(
+    (line) => line.category === "garnish",
+  );
 
   return (
     <>
-      <Header recipe={recipe} />
-      <main className="flex-1 overflow-y-auto px-6 pb-6">
+      <Header recipe={recipe}>All done</Header>
+      <main className="flex-1 overflow-y-auto px-4 py-6 sm:px-6">
         <div className="mx-auto max-w-xl">
-          <h1 className="text-3xl font-semibold tracking-tight">Enjoy your {recipe.name}</h1>
+          <div className="mb-6 flex justify-center rounded-card border border-line bg-sunken py-6">
+            <RecipeGlass recipe={recipe} size={112} />
+          </div>
+          <p className="eyebrow mb-2">Made by you</p>
+          <h1 className="text-4xl font-bold tracking-tight">
+            Enjoy your {recipe.name}
+          </h1>
           <ul className="mt-4 space-y-1 text-lg">
             {recipe.glass && <li>Serve in a {recipe.glass}.</li>}
             {garnishes.map((line) => (
-              <li key={line.ingredient}>Garnish: {formatIngredient(line, options)}.</li>
+              <li key={line.ingredient}>
+                Garnish: {formatIngredient(line, options)}.
+              </li>
             ))}
-            {recipe.type === "coffee" && <li>Serve right away, while it&apos;s hot.</li>}
+            {recipe.type === "coffee" && (
+              <li>Serve right away, while it&apos;s hot.</li>
+            )}
           </ul>
 
-          <Button
-            variant="outline"
-            size="lg"
-            className="mt-8"
-            aria-pressed={favorite}
-            onClick={() => setFavorite(!favorite)}
-          >
-            <HeartIcon data-icon="inline-start" className={cn(favorite && "fill-current")} />
-            {favorite ? "Favorited" : "Favorite"}
-          </Button>
-
-          <label className="mt-6 block">
-            <span className="text-sm font-medium">Your notes</span>
-            <Textarea
-              className="mt-2 min-h-28"
-              placeholder="What would you change next time?"
-              value={note}
-              onChange={(event) => setNote(event.target.value)}
-            />
-          </label>
+          <div className="mt-8">
+            <RecipePersonal recipeId={recipe.id} />
+          </div>
         </div>
       </main>
       <Footer>

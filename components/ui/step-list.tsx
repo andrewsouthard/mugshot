@@ -3,6 +3,7 @@ import { cn } from "cn";
 import type { ResolvedIngredientLine, Step } from "@/lib/content/schema";
 import {
   formatDuration,
+  describeTimer,
   formatTarget,
   renderStepText,
   type DisplayOptions,
@@ -30,7 +31,9 @@ export function StepList({
           <p className="pt-1 leading-relaxed">
             {renderStepText(step.text, ingredients, options)}
             {step.timer && (
-              <Chip icon={<TimerGlyph />}>{formatDuration(step.timer.seconds)}</Chip>
+              <Chip icon={<TimerGlyph />} label={describeTimer(step.timer)}>
+                {formatDuration(step.timer.seconds)}
+              </Chip>
             )}
             {step.target && (
               <Chip>{formatTarget(step.target, ingredients, options)}</Chip>
@@ -42,9 +45,21 @@ export function StepList({
   );
 }
 
-function Chip({ icon, children }: { icon?: ReactNode; children: ReactNode }) {
+function Chip({
+  icon,
+  children,
+  label,
+}: {
+  icon?: ReactNode;
+  children: ReactNode;
+  label?: string;
+}) {
   return (
-    <span className="measure ml-2 inline-flex h-5 items-center gap-1 rounded-full bg-brand-wash px-2 align-[1px] text-xs text-ink">
+    <span
+      aria-label={label}
+      title={label}
+      className="measure ml-2 inline-flex h-5 items-center gap-1 rounded-full bg-brand-wash px-2 align-[1px] text-xs text-ink"
+    >
       {icon}
       {children}
     </span>
@@ -54,8 +69,21 @@ function Chip({ icon, children }: { icon?: ReactNode; children: ReactNode }) {
 function TimerGlyph() {
   return (
     <svg viewBox="0 0 12 12" className="size-3" aria-hidden>
-      <circle cx="6" cy="6.5" r="4.5" fill="none" stroke="currentColor" strokeWidth="1.3" />
-      <path d="M6 4v2.5l1.5 1M4.5 1h3" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+      <circle
+        cx="6"
+        cy="6.5"
+        r="4.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.3"
+      />
+      <path
+        d="M6 4v2.5l1.5 1M4.5 1h3"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }

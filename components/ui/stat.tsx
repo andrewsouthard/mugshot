@@ -25,9 +25,7 @@ export function Stat({
     <div
       className={cn(
         "rounded-control border px-4 py-3",
-        emphasis
-          ? "border-brand bg-brand-wash"
-          : "border-line bg-surface",
+        emphasis ? "border-brand bg-brand-wash" : "border-line bg-surface",
         className,
       )}
     >
@@ -44,28 +42,50 @@ export function Stat({
 export function BrewSpecGrid({
   recipe,
   temperature = "C",
+  scale = 1,
   className,
 }: {
   recipe: Pick<ResolvedRecipe, "brew" | "ingredients">;
   temperature?: TemperatureUnit;
+  scale?: number;
   className?: string;
 }) {
   const { brew, ingredients } = recipe;
   if (!brew) return null;
   const grams = (category: string) =>
-    ingredients.find((line) => line.category === category && line.unit === "g")?.amount;
+    ingredients.find((line) => line.category === category && line.unit === "g")
+      ?.amount;
   const dose = grams("coffee");
   const water = grams("water");
   const ratio = brewRatio(recipe);
   return (
     <div className={cn("grid grid-cols-2 gap-2 sm:grid-cols-3", className)}>
-      {dose !== undefined && <Stat label="Dose" value={dose} unit="g" />}
-      {water !== undefined && <Stat label="Water" value={water} unit="g" />}
+      {dose !== undefined && (
+        <Stat
+          label="Dose"
+          value={Math.round(dose * scale * 10) / 10}
+          unit="g"
+        />
+      )}
+      {water !== undefined && (
+        <Stat
+          label="Water"
+          value={Math.round(water * scale * 10) / 10}
+          unit="g"
+        />
+      )}
       {ratio && <Stat label="Ratio" value={ratio} emphasis />}
-      <Stat label="Temp" value={formatTemperature(brew.waterTempC, temperature)} />
+      <Stat
+        label="Temp"
+        value={formatTemperature(brew.waterTempC, temperature)}
+      />
       <Stat
         label="Grind"
-        value={<span className="inline-block font-sans text-base first-letter:uppercase">{brew.grind}</span>}
+        value={
+          <span className="inline-block font-sans text-base first-letter:uppercase">
+            {brew.grind}
+          </span>
+        }
       />
     </div>
   );

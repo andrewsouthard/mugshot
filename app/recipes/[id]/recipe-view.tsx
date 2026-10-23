@@ -1,112 +1,78 @@
 "use client";
 
-import { MinusIcon, PlusIcon, TargetIcon, TimerIcon } from "lucide-react";
+import { ArrowRightIcon } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
+import { RecipeWorkbench } from "@/components/ui/recipe-workbench";
+import { StepList } from "@/components/ui/step-list";
+import { BrewSpecGrid } from "@/components/ui/stat";
+import { SpecList } from "@/components/ui/spec-list";
+import { RatioBar } from "@/components/ui/ratio-bar";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { RecipePersonal } from "@/components/recipe-personal";
 import type { ResolvedRecipe } from "@/lib/content/schema";
 import { usePreference } from "@/lib/preferences";
 import {
-  brewRatio,
-  describeTimer,
-  formatIngredient,
-  formatTarget,
-  formatTemperature,
-  renderStepText,
+  partSizeMl,
+  VOLUME_DISPLAYS,
   type DisplayOptions,
   type TemperatureUnit,
-  type VolumeUnit,
+  type VolumeDisplay,
 } from "@/lib/recipe/format";
 
-const MAX_SERVINGS = 12;
-const VOLUME_UNITS = ["oz", "ml"] as const;
 const TEMPERATURE_UNITS = ["C", "F"] as const;
 
-/** The interactive part of a recipe page: servings, units and the method. */
 export function RecipeView({ recipe }: { recipe: ResolvedRecipe }) {
   const [servings, setServings] = useState(recipe.serves);
-  const [volume, setVolume] = usePreference<VolumeUnit>("volume-unit", VOLUME_UNITS, "oz");
+  const [volume, setVolume] = usePreference<VolumeDisplay>(
+    "volume-unit",
+    VOLUME_DISPLAYS,
+    "oz",
+  );
   const [temperature, setTemperature] = usePreference<TemperatureUnit>(
     "temperature-unit",
     TEMPERATURE_UNITS,
     "C",
   );
-
   const options: DisplayOptions = {
     scale: servings / recipe.serves,
-    // Coffee is always weighed in grams.
     volume: recipe.type === "cocktail" ? volume : undefined,
+    partMl: partSizeMl(recipe.ingredients),
   };
-  const ratio = brewRatio(recipe);
 
   return (
-    <>
-      <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
-        <div role="group" aria-label="Servings" className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            aria-label="Fewer servings"
-            disabled={servings <= 1}
-            onClick={() => setServings(servings - 1)}
-          >
-            <MinusIcon />
-          </Button>
-          <output aria-live="polite" className="min-w-24 text-center text-sm tabular-nums">
-            {servings} {servings === 1 ? "serving" : "servings"}
-          </output>
-          <Button
-            variant="outline"
-            size="icon"
-            aria-label="More servings"
-            disabled={servings >= MAX_SERVINGS}
-            onClick={() => setServings(servings + 1)}
-          >
-            <PlusIcon />
-          </Button>
-        </div>
-        {recipe.type === "cocktail" && (
-          <UnitToggle
-            label="Volume unit"
-            units={VOLUME_UNITS}
-            value={volume}
-            onChange={setVolume}
-            format={(unit) => unit}
-          />
-        )}
-      </div>
-
-      <section aria-labelledby="ingredients" className="mt-8">
-        <h2 id="ingredients" className="text-lg font-semibold">
-          Ingredients
-        </h2>
-        <ul className="mt-3 space-y-2">
-          {recipe.ingredients.map((line) => (
-            <li key={line.ingredient} className="flex flex-wrap items-baseline gap-x-2">
-              <span>{formatIngredient(line, options)}</span>
-              {line.note && <span className="text-sm text-muted-foreground">{line.note}</span>}
-              {line.optional && <Badge variant="outline">optional</Badge>}
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      {recipe.brew && (
-        <section aria-labelledby="brew" className="mt-8">
-          <h2 id="brew" className="text-lg font-semibold">
-            Brew
+    <div className="mt-10 grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-12">
+      <div className="min-w-0 space-y-6">
+        <section
+          aria-labelledby="ingredients"
+          className="rounded-card border border-line bg-surface p-5 sm:p-6"
+        >
+          <h2 id="ingredients" className="eyebrow mb-5">
+            Ingredients
           </h2>
-          <dl className="mt-3 grid grid-cols-[auto_1fr] items-center gap-x-6 gap-y-2">
-            <dt className="text-muted-foreground">Grind</dt>
-            <dd>{recipe.brew.grind}</dd>
-            <dt className="text-muted-foreground">Water</dt>
-            <dd className="flex items-center gap-3">
-              <span className="tabular-nums">
-                {formatTemperature(recipe.brew.waterTempC, temperature)}
-              </span>
+          <RecipeWorkbench
+            ingredients={recipe.ingredients}
+            serves={recipe.serves}
+            servings={servings}
+            onServingsChange={setServings}
+            volume={volume}
+            onVolumeChange={setVolume}
+            noun={["serving", "servings"]}
+          />
+          {recipe.type === "cocktail" && (
+            <RatioBar
+              ingredients={recipe.ingredients}
+              className="mt-6 border-t border-line pt-5"
+            />
+          )}
+        </section>
+        {recipe.brew && (
+          <section aria-labelledby="brew">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h2 id="brew" className="eyebrow">
+                Brew settings
+              </h2>
               <UnitToggle
                 label="Temperature unit"
                 units={TEMPERATURE_UNITS}
@@ -114,68 +80,64 @@ export function RecipeView({ recipe }: { recipe: ResolvedRecipe }) {
                 onChange={setTemperature}
                 format={(unit) => `°${unit}`}
               />
-            </dd>
-            {ratio && (
-              <>
-                <dt className="text-muted-foreground">Ratio</dt>
-                <dd className="tabular-nums">{ratio}</dd>
-              </>
-            )}
-          </dl>
+            </div>
+            <BrewSpecGrid
+              recipe={recipe}
+              temperature={temperature}
+              scale={options.scale}
+            />
+          </section>
+        )}
+        <section
+          aria-labelledby="equipment"
+          className="rounded-card border border-line p-5 sm:p-6"
+        >
+          <h2 id="equipment" className="eyebrow mb-4">
+            Before you start
+          </h2>
+          <SpecList
+            items={[
+              ["Equipment", recipe.equipment.join(", ")],
+              ...(recipe.glass
+                ? [["Glass", recipe.glass] as [string, string]]
+                : []),
+              ["Method", recipe.method],
+            ]}
+          />
         </section>
-      )}
-
-      <section aria-labelledby="equipment" className="mt-8">
-        <h2 id="equipment" className="text-lg font-semibold">
-          Equipment
-        </h2>
-        <ul className="mt-3 list-disc space-y-1 pl-5">
-          {recipe.equipment.map((item) => (
-            <li key={item}>{item}</li>
-          ))}
-        </ul>
-      </section>
-
-      <Separator className="my-8" />
-
-      <section aria-labelledby="steps">
-        <h2 id="steps" className="text-lg font-semibold">
-          Steps
-        </h2>
-        <ol className="mt-3 list-decimal space-y-4 pl-5">
-          {recipe.steps.map((step, index) => (
-            <li key={index} className="pl-1">
-              <p>{renderStepText(step.text, recipe.ingredients, options)}</p>
-              {(step.timer || step.target) && (
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {step.timer && (
-                    <Badge variant="secondary">
-                      <TimerIcon data-icon="inline-start" />
-                      {describeTimer(step.timer)}
-                    </Badge>
-                  )}
-                  {step.target && (
-                    <Badge variant="secondary">
-                      <TargetIcon data-icon="inline-start" />
-                      Target: {formatTarget(step.target, recipe.ingredients, options)}
-                    </Badge>
-                  )}
-                </div>
-              )}
-            </li>
-          ))}
-        </ol>
-      </section>
-
-      <Button
-        size="lg"
-        className="mt-8"
-        nativeButton={false}
-        render={<Link href={`/recipes/${recipe.id}/make?servings=${servings}`} />}
-      >
-        Make it
-      </Button>
-    </>
+      </div>
+      <div className="min-w-0 space-y-8">
+        <section aria-labelledby="steps">
+          <div className="mb-6 flex items-center justify-between gap-4">
+            <h2 id="steps" className="eyebrow">
+              The method
+            </h2>
+            <span className="measure text-xs text-ink-muted">
+              {recipe.steps.length} steps
+            </span>
+          </div>
+          <StepList
+            steps={recipe.steps}
+            ingredients={recipe.ingredients}
+            options={options}
+          />
+          <Button
+            size="lg"
+            className="mt-8 h-12 w-full"
+            nativeButton={false}
+            render={
+              <Link href={`/recipes/${recipe.id}/make?servings=${servings}`} />
+            }
+          >
+            Make it <ArrowRightIcon data-icon="inline-end" />
+          </Button>
+          <p className="mt-2 text-center text-xs text-ink-muted">
+            One step at a time, with timers along the way.
+          </p>
+        </section>
+        <RecipePersonal recipeId={recipe.id} />
+      </div>
+    </div>
   );
 }
 
