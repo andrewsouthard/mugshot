@@ -37,7 +37,7 @@ export function IngredientList({
               )}
             </span>
             <span className="min-w-0">
-              <span className="flex items-center gap-2 font-medium">
+              <span className="flex flex-wrap items-center gap-2 font-medium">
                 <Swatch category={line.category} />
                 <span className="inline-block first-letter:uppercase">{line.name}</span>
                 {line.optional && <Badge variant="outline">optional</Badge>}

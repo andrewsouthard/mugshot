@@ -21,8 +21,7 @@ import { BrewSpecGrid, Stat } from "@/components/ui/stat";
 import { FlavorProfile } from "@/components/ui/flavor-profile";
 import { BrewTimer } from "@/components/ui/brew-timer";
 import { RecipeCard } from "@/components/ui/recipe-card";
-import { Logo } from "@/components/ui/logo";
-import { ModeSwitch } from "@/components/ui/mode-switch";
+import { SiteHeader } from "@/components/site-header";
 import { StepperDemo, ToggleGroupDemo } from "./demos";
 
 export const metadata: Metadata = { title: "Design system" };
@@ -44,12 +43,7 @@ const NAV = [
 export default function DesignSystemPage() {
   return (
     <>
-      <header className="border-b border-line">
-        <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-4 px-6">
-          <Logo />
-          <ModeSwitch />
-        </div>
-      </header>
+      <SiteHeader />
       <main className="mx-auto w-full max-w-6xl px-6 py-14">
         <p className="eyebrow">Mugshot design system</p>
         <h1 className="mt-2 max-w-3xl text-5xl font-bold tracking-tight text-balance">

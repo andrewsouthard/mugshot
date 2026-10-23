@@ -12,9 +12,9 @@ export function OfflineBanner() {
   return (
     <div
       role="status"
-      className="sticky top-0 z-50 bg-foreground px-4 py-2 text-center text-sm text-background"
+      className="sticky top-0 z-50 border-b border-line bg-brand-wash px-4 py-2 text-center text-sm text-ink"
     >
-      You&apos;re offline. Pending requests will retry when you reconnect.
+      You&apos;re offline. Saved recipes are ready to make.
     </div>
   );
 }

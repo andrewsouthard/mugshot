@@ -80,6 +80,11 @@ A public, installable PWA of home bartending and barista recipes. There is no ba
 
 - Scale factor = chosen servings ÷ `serves`. It applies to ingredient amounts and step targets.
 - Cocktails: toggle between oz and ml (1 oz = 30 ml). Converted ml amounts round to the nearest 5 ml, or to the nearest 2.5 ml below 15 ml (¾ oz → 25 ml, ¼ oz → 7.5 ml). Oz amounts display as fractions (¼, ½, ¾).
+- Cocktails also have a parts display for a jigger or any consistent measure.
+  The first required spirit is 1 part, falling back to the first required
+  volume for spirit-free recipes. Parts use the original oz/ml proportions
+  before rounding and scale with servings. Dashes, barspoons, pieces and grams
+  keep their units. The choice is remembered and applies to guided mode too.
 - Dashes round to whole dashes (at least 1). Barspoons round to the nearest ½.
 - Coffee: always grams. Water temperature has a °C/°F toggle. The brew ratio isn't stored; it's derived from the coffee and water amounts (30 g : 450 g shows as 1:15).
 
